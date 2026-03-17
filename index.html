@@ -503,14 +503,14 @@ async function postFeature(lat, lng, attr) {
       attributes: attr
     };
     const body = new URLSearchParams();
-    body.append('features', JSON.stringify([feat]));
+    body.append('adds', JSON.stringify([feat]));
     body.append('rollbackOnFailure', 'true');
     body.append('f', 'json');
     if (cfg.token) body.append('token', cfg.token);
 
-    const url = cfg.fsurl.replace(/\/$/, '') + '/addFeatures';
+    const url = cfg.fsurl.replace(/\/$/, '') + '/applyEdits';
     console.log('[FS] POST →', url);
-    console.log('[FS] Payload:', JSON.parse(body.get('features')));
+    console.log('[FS] adds payload:', JSON.parse(body.get('adds')));
 
     const r = await fetch(url, { method: 'POST', body });
     const j = await r.json();
