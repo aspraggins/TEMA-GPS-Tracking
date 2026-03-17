@@ -2,163 +2,133 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Field Tracker</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#e0e0e0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#0d1117;color:#e0e0e0}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
-  /* ── GPS BANNER ── */
-  #banner{background:#0f0f1e;border-bottom:1px solid #333;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:52px}
-  #gps-dot{width:10px;height:10px;border-radius:50%;background:#888;flex-shrink:0;transition:background .3s}
-  #gps-dot.good{background:#22c55e;box-shadow:0 0 6px #22c55e88}
-  #gps-dot.ok{background:#f59e0b}
-  #gps-dot.bad{background:#ef4444}
-  #banner-coords{font-size:13px;font-family:monospace;color:#a3e635;flex:1;min-width:200px}
-  #banner-meta{font-size:11px;color:#888;display:flex;gap:14px;flex-wrap:wrap}
-  #banner-meta span{white-space:nowrap}
-  .acc-good{color:#22c55e}
-  .acc-ok{color:#f59e0b}
-  .acc-bad{color:#ef4444}
+/* BANNER */
+#banner{background:#0f0f1e;border-bottom:1px solid #1e3a5f;padding:8px 12px;flex-shrink:0}
+#banner-row1{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+#gps-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;transition:background .3s}
+#gps-dot.good{background:#22c55e;box-shadow:0 0 6px #22c55e88}
+#gps-dot.ok{background:#f59e0b;box-shadow:0 0 6px #f59e0b88}
+#gps-dot.bad{background:#ef4444}
+#banner-coords{font-size:13px;font-family:monospace;color:#a3e635;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#banner-row2{display:flex;gap:10px;flex-wrap:wrap}
+.bmeta{font-size:11px;color:#666;white-space:nowrap}
+.bmeta span{color:#aaa}
+.acc-good{color:#22c55e!important}
+.acc-ok{color:#f59e0b!important}
+.acc-bad{color:#ef4444!important}
 
-  /* ── TOOLBAR ── */
-  #toolbar{background:#0f1b2d;border-bottom:1px solid #1e3a5f;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  button{padding:6px 14px;border-radius:6px;border:1px solid #2a4a6b;background:#1a2f4a;color:#90caf9;font-size:13px;cursor:pointer;transition:background .15s}
-  button:hover{background:#1e3f64}
-  button.danger{border-color:#4a1a1a;background:#2a1010;color:#f87171}
-  button.danger:hover{background:#3a1515}
-  button.active{background:#1565c0;border-color:#1976d2;color:#fff}
-  button.submit-btn{background:#155724;border-color:#1e6e38;color:#90ee90;font-weight:600}
-  button.submit-btn:hover{background:#1a6e2e}
-  button.submit-btn.loading{opacity:.6;cursor:not-allowed}
-  #settings-btn{margin-left:auto}
-  #status-msg{font-size:12px;color:#888;padding:0 4px}
+/* TOOLBAR */
+#toolbar{background:#0a1628;border-bottom:1px solid #1e3a5f;padding:6px 8px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.tb-btn{padding:7px 12px;border-radius:7px;border:1px solid #1e3a5f;background:#0f1e33;color:#90caf9;font-size:13px;cursor:pointer;white-space:nowrap;touch-action:manipulation;min-height:36px}
+.tb-btn:active{opacity:.75}
+.tb-btn.active{background:#1565c0;border-color:#2196f3;color:#fff}
+.tb-btn.green{background:#14532d;border-color:#16a34a;color:#86efac;font-weight:600}
+.tb-btn.red{background:#450a0a;border-color:#dc2626;color:#fca5a5}
+#status-msg{font-size:11px;color:#666;flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:2px}
 
-  /* ── MAP ── */
-  #map{flex:1;z-index:1}
+/* MAP */
+#map{flex:1;min-height:0;z-index:1}
 
-  /* ── SETTINGS PANEL ── */
-  #settings-panel{position:absolute;top:0;right:0;width:320px;height:100%;background:#0f1b2d;border-left:1px solid #1e3a5f;z-index:1000;display:none;flex-direction:column;overflow-y:auto}
-  #settings-panel.open{display:flex}
-  #settings-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e3a5f}
-  #settings-header h2{font-size:15px;font-weight:600;color:#90caf9}
-  #close-settings{background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:0 4px}
-  #close-settings:hover{color:#fff}
-  .settings-body{padding:16px;display:flex;flex-direction:column;gap:16px}
-  .field-group{display:flex;flex-direction:column;gap:5px}
-  .field-group label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em}
-  .field-group input,.field-group textarea,.field-group select{background:#0a121f;border:1px solid #1e3a5f;border-radius:6px;color:#e0e0e0;padding:8px 10px;font-size:14px;width:100%}
-  .field-group input:focus,.field-group textarea:focus{outline:none;border-color:#1976d2}
-  .field-group textarea{resize:vertical;min-height:70px;font-family:system-ui}
-  .settings-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#1976d2;margin-top:4px}
-  .save-row{display:flex;justify-content:flex-end;margin-top:8px}
-  .save-row button{background:#155724;border-color:#1e6e38;color:#90ee90}
-  .save-row button:hover{background:#1a6e2e}
+/* TRACK INFO */
+#track-info{position:absolute;bottom:14px;left:10px;z-index:500;background:#0f1b2dee;border:1px solid #1e3a5f;border-radius:8px;padding:6px 10px;font-size:12px;color:#90caf9;display:none;pointer-events:none}
+#track-info.vis{display:block}
 
-  /* ── TOAST ── */
-  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e3a1e;color:#90ee90;border:1px solid #2e6e2e;padding:10px 20px;border-radius:8px;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none}
-  #toast.error{background:#3a1e1e;color:#f87171;border-color:#6e2e2e}
-  #toast.show{opacity:1}
+/* SETTINGS DRAWER */
+#overlay{display:none;position:fixed;inset:0;background:#00000088;z-index:900;touch-action:none}
+#overlay.open{display:block}
+#drawer{position:fixed;top:0;right:-100%;width:min(320px,100vw);height:100%;background:#0a121f;border-left:1px solid #1e3a5f;z-index:1000;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
+#drawer.open{right:0}
+#drawer-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #1e3a5f;flex-shrink:0}
+#drawer-head h2{font-size:15px;font-weight:600;color:#90caf9}
+#close-btn{background:none;border:none;color:#888;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;touch-action:manipulation}
+#close-btn:active{color:#fff}
+#drawer-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch}
+.sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1976d2;margin-top:2px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg textarea,.fg select{background:#060d18;border:1px solid #1e3a5f;border-radius:6px;color:#e0e0e0;padding:9px 10px;font-size:15px;width:100%;-webkit-appearance:none}
+.fg input:focus,.fg textarea:focus{outline:none;border-color:#1976d2}
+.fg textarea{resize:vertical;min-height:65px;font-family:inherit}
+.save-btn{width:100%;padding:10px;border-radius:8px;background:#14532d;border:1px solid #16a34a;color:#86efac;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;min-height:44px;touch-action:manipulation}
+.save-btn:active{opacity:.8}
 
-  /* ── LEAFLET overrides ── */
-  .leaflet-control-attribution{font-size:10px}
-  .loc-marker-inner{width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 8px #3b82f688}
-  .loc-pulse{width:40px;height:40px;border-radius:50%;background:#3b82f622;border:1px solid #3b82f655;position:absolute;top:-13px;left:-13px;animation:pulse 2s infinite}
-  @keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2);opacity:0}}
-  .track-marker{width:10px;height:10px;border-radius:50%;background:#f59e0b55;border:1px solid #f59e0b;box-shadow:0 0 4px #f59e0b44}
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#14532d;color:#86efac;border:1px solid #16a34a;padding:10px 18px;border-radius:10px;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.err{background:#450a0a;color:#fca5a5;border-color:#dc2626}
+#toast.show{opacity:1}
 
-  /* ── TRACK INFO ── */
-  #track-info{position:absolute;bottom:10px;left:10px;z-index:500;background:#0f1b2dcc;backdrop-filter:blur(4px);border:1px solid #1e3a5f;border-radius:8px;padding:8px 12px;font-size:12px;color:#90caf9;display:none}
-  #track-info.visible{display:block}
+/* LEAFLET */
+.leaflet-control-zoom a{min-height:30px;min-width:30px;line-height:30px}
+.my-dot{width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2.5px solid #fff;box-shadow:0 0 0 3px #3b82f644}
+.pulse-ring{width:40px;height:40px;border-radius:50%;background:#3b82f618;border:1.5px solid #3b82f655;position:absolute;top:-13px;left:-13px;animation:pulse 2s infinite ease-out}
+@keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2.2);opacity:0}}
 </style>
 </head>
 <body>
+<div id="app">
 
-<!-- GPS BANNER -->
-<div id="banner">
-  <div id="gps-dot"></div>
-  <div id="banner-coords">Acquiring GPS...</div>
-  <div id="banner-meta">
-    <span id="meta-acc">Acc: —</span>
-    <span id="meta-alt">Alt: —</span>
-    <span id="meta-spd">Spd: —</span>
-    <span id="meta-hdg">Hdg: —</span>
-    <span id="meta-time">—</span>
+  <!-- BANNER -->
+  <div id="banner">
+    <div id="banner-row1">
+      <div id="gps-dot"></div>
+      <div id="banner-coords">Acquiring GPS…</div>
+    </div>
+    <div id="banner-row2">
+      <div class="bmeta">Acc: <span id="m-acc">—</span></div>
+      <div class="bmeta">Alt: <span id="m-alt">—</span></div>
+      <div class="bmeta">Spd: <span id="m-spd">—</span></div>
+      <div class="bmeta">Hdg: <span id="m-hdg">—</span></div>
+      <div class="bmeta"><span id="m-time">—</span></div>
+    </div>
   </div>
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <button class="tb-btn green" id="submit-btn" onclick="submitLoc()">Submit</button>
+    <button class="tb-btn" id="track-btn" onclick="toggleTrack()">Live Track</button>
+    <button class="tb-btn" id="center-btn" onclick="centerMap()">Center</button>
+    <button class="tb-btn red" onclick="clearTrack()">Clear</button>
+    <span id="status-msg">Ready</span>
+    <button class="tb-btn" onclick="openDrawer()">&#9881;</button>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+  <div id="track-info"><span id="ti-pts">0 pts</span> &nbsp;·&nbsp; <span id="ti-dist">0.0 mi</span></div>
+
 </div>
 
-<!-- TOOLBAR -->
-<div id="toolbar">
-  <button class="submit-btn" id="submit-btn" onclick="submitLocation()">Submit Location</button>
-  <button id="track-btn" onclick="toggleTracking()">Live Track</button>
-  <button id="center-btn" onclick="centerMap()">Center</button>
-  <button class="danger" id="clear-btn" onclick="clearTrack()">Clear Track</button>
-  <span id="status-msg">Ready</span>
-  <button id="settings-btn" onclick="openSettings()">Settings</button>
-</div>
-
-<!-- MAP -->
-<div id="map"></div>
-<div id="track-info">
-  <span id="track-pts">0 pts</span> &nbsp;|&nbsp; <span id="track-dist">0.0 mi</span>
-</div>
-
-<!-- SETTINGS PANEL -->
-<div id="settings-panel">
-  <div id="settings-header">
+<!-- SETTINGS DRAWER -->
+<div id="overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+  <div id="drawer-head">
     <h2>Responder Settings</h2>
-    <button id="close-settings" onclick="closeSettings()">✕</button>
+    <button id="close-btn" onclick="closeDrawer()">&#x2715;</button>
   </div>
-  <div class="settings-body">
-    <div class="settings-section-title">Identity</div>
-    <div class="field-group">
-      <label>Name</label>
-      <input type="text" id="s-name" placeholder="Full name"/>
-    </div>
-    <div class="field-group">
-      <label>Agency</label>
-      <input type="text" id="s-agency" placeholder="e.g. TEMA, Hamilton Co EMA"/>
-    </div>
-    <div class="field-group">
-      <label>Region</label>
-      <input type="text" id="s-region" placeholder="e.g. West TN"/>
-    </div>
-    <div class="field-group">
-      <label>Car Number</label>
-      <input type="text" id="s-car" placeholder="e.g. ESC-7"/>
-    </div>
-    <div class="field-group">
-      <label>Assigned</label>
-      <input type="text" id="s-assigned" placeholder="Current assignment or mission"/>
-    </div>
-    <div class="settings-section-title" style="margin-top:4px">Feature Service</div>
-    <div class="field-group">
-      <label>ArcGIS Feature Service URL</label>
-      <input type="text" id="s-fsurl" placeholder="https://.../FeatureServer/0"/>
-    </div>
-    <div class="field-group">
-      <label>Token (optional)</label>
-      <input type="text" id="s-token" placeholder="ArcGIS token or leave blank"/>
-    </div>
-    <div class="settings-section-title" style="margin-top:4px">Notes</div>
-    <div class="field-group">
-      <label>Notes</label>
-      <textarea id="s-notes" placeholder="Mission notes, assignment, etc."></textarea>
-    </div>
-    <div class="settings-section-title" style="margin-top:4px">Tracking</div>
-    <div class="field-group">
-      <label>Auto-submit interval (seconds)</label>
-      <input type="number" id="s-interval" value="30" min="5" max="300"/>
-    </div>
-    <div class="field-group">
-      <label>Min distance filter (meters)</label>
-      <input type="number" id="s-mindist" value="10" min="0" max="500"/>
-    </div>
-    <div class="save-row">
-      <button onclick="saveSettings()">Save Settings</button>
-    </div>
+  <div id="drawer-body">
+    <div class="sec-label">Identity</div>
+    <div class="fg"><label>Name</label><input id="s-name" type="text" placeholder="Full name" autocomplete="name"/></div>
+    <div class="fg"><label>Agency</label><input id="s-agency" type="text" placeholder="e.g. TEMA"/></div>
+    <div class="fg"><label>Region</label><input id="s-region" type="text" placeholder="e.g. West TN"/></div>
+    <div class="fg"><label>Car Number</label><input id="s-car" type="text" placeholder="e.g. ESC-7"/></div>
+    <div class="fg"><label>Assigned</label><input id="s-assigned" type="text" placeholder="Current assignment"/></div>
+    <div class="fg"><label>Notes</label><textarea id="s-notes" placeholder="Mission notes…"></textarea></div>
+    <div class="sec-label">Feature Service</div>
+    <div class="fg"><label>FeatureServer Layer URL</label><input id="s-fsurl" type="url" placeholder="…/FeatureServer/0" inputmode="url"/></div>
+    <div class="fg"><label>Token (if required)</label><input id="s-token" type="text" placeholder="ArcGIS token"/></div>
+    <div class="sec-label">Tracking</div>
+    <div class="fg"><label>Auto-submit interval (sec)</label><input id="s-interval" type="number" value="30" min="5" max="300" inputmode="numeric"/></div>
+    <div class="fg"><label>Min distance filter (m)</label><input id="s-mindist" type="number" value="10" min="0" max="500" inputmode="numeric"/></div>
+    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
   </div>
 </div>
 
@@ -166,205 +136,181 @@
 <div id="toast"></div>
 
 <script>
-const DEMO_MODE = false;
+const DEFAULT_FS = 'https://services8.arcgis.com/hHiNEOyFVAr0vW21/arcgis/rest/services/service_0fc5bb1784aa47fa8c9a0e1b3bf6e425/FeatureServer/0';
 
-let map, locMarker, trackLine, watchId=null, isTracking=false;
-let lastPos=null, trackCoords=[], trackPoints=[], autoInterval=null;
-let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',fsurl:'https://services8.arcgis.com/hHiNEOyFVAr0vW21/arcgis/rest/services/service_0fc5bb1784aa47fa8c9a0e1b3bf6e425/FeatureServer/0',token:'',interval:30,mindist:10};
+let map, locMarker, accCircle, trackLine, watchId=null;
+let isTracking=false, autoTimer=null;
+let lastPos=null, trackCoords=[], trackPts=[];
+let cfg={name:'',agency:'',region:'',car:'',assigned:'',notes:'',fsurl:DEFAULT_FS,token:'',interval:30,mindist:10};
 
-// ── INIT MAP ──────────────────────────────────────────────
+// ── MAP ───────────────────────────────────────────────────
 function initMap(){
-  map = L.map('map',{zoomControl:true}).setView([35.8,-86.4],7);
+  map=L.map('map',{zoomControl:true,tap:true}).setView([35.8,-86.4],7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap',maxZoom:19
+    attribution:'© OpenStreetMap',maxZoom:19,detectRetina:true
   }).addTo(map);
-  // alt: ESRI satellite
-  // L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'ESRI'}).addTo(map);
   loadCfg();
   startWatch();
 }
 
-// ── GPS WATCH ─────────────────────────────────────────────
+// ── GPS ───────────────────────────────────────────────────
 function startWatch(){
-  if(!navigator.geolocation){showToast('Geolocation not supported','error');return}
-  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
-    enableHighAccuracy:true,maximumAge:5000,timeout:15000
-  });
+  if(!navigator.geolocation){toast('Geolocation not supported','err');return}
+  navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:4000,timeout:15000});
 }
 
 function onPos(pos){
-  const {latitude:lat,longitude:lng,accuracy:acc,altitude:alt,speed:spd,heading:hdg} = pos.coords;
-  lastPos = pos;
-  updateBanner(lat,lng,acc,alt,spd,hdg,pos.timestamp);
-  updateMarker(lat,lng,acc);
-  if(isTracking) recordTrackPoint(lat,lng,pos.timestamp);
-}
-
-function onErr(e){
-  document.getElementById('banner-coords').textContent='GPS error: '+e.message;
-  document.getElementById('gps-dot').className='bad';
-}
-
-function updateBanner(lat,lng,acc,alt,spd,hdg,ts){
-  const dot = document.getElementById('gps-dot');
-  dot.className = acc<10?'good':acc<30?'ok':'bad';
-  const accCls = acc<10?'acc-good':acc<30?'acc-ok':'acc-bad';
-  document.getElementById('banner-coords').textContent =
-    `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  document.getElementById('meta-acc').innerHTML =
-    `Acc: <span class="${accCls}">±${Math.round(acc)}m</span>`;
-  document.getElementById('meta-alt').textContent =
-    alt!=null?`Alt: ${Math.round(alt)}m`:'Alt: —';
-  document.getElementById('meta-spd').textContent =
-    spd!=null?`Spd: ${(spd*2.237).toFixed(1)}mph`:'Spd: —';
-  document.getElementById('meta-hdg').textContent =
-    hdg!=null?`Hdg: ${Math.round(hdg)}°`:'Hdg: —';
-  document.getElementById('meta-time').textContent =
-    new Date(ts).toLocaleTimeString();
-}
-
-// ── MAP MARKER ────────────────────────────────────────────
-function updateMarker(lat,lng,acc){
+  lastPos=pos;
+  const {latitude:lat,longitude:lng,accuracy:acc,altitude:alt,speed:spd,heading:hdg}=pos.coords;
+  // banner
+  const dot=document.getElementById('gps-dot');
+  dot.className=acc<10?'good':acc<30?'ok':'bad';
+  document.getElementById('banner-coords').textContent=`${lat.toFixed(6)},  ${lng.toFixed(6)}`;
+  const accEl=document.getElementById('m-acc');
+  accEl.textContent=`±${Math.round(acc)}m`;
+  accEl.className=acc<10?'acc-good':acc<30?'acc-ok':'acc-bad';
+  document.getElementById('m-alt').textContent=alt!=null?`${Math.round(alt)}m`:'—';
+  document.getElementById('m-spd').textContent=spd!=null?`${(spd*2.237).toFixed(1)}mph`:'—';
+  document.getElementById('m-hdg').textContent=hdg!=null?`${Math.round(hdg)}°`:'—';
+  document.getElementById('m-time').textContent=new Date(pos.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  // marker
   if(!locMarker){
-    const icon = L.divIcon({
-      className:'',
-      html:'<div style="position:relative"><div class="loc-pulse"></div><div class="loc-marker-inner"></div></div>',
-      iconSize:[14,14],iconAnchor:[7,7]
-    });
-    locMarker = L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
-    if(acc>0) locMarker.accCircle = L.circle([lat,lng],{radius:acc,color:'#3b82f6',fillOpacity:.08,weight:1}).addTo(map);
+    const icon=L.divIcon({className:'',html:'<div style="position:relative"><div class="pulse-ring"></div><div class="my-dot"></div></div>',iconSize:[14,14],iconAnchor:[7,7]});
+    locMarker=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
+    accCircle=L.circle([lat,lng],{radius:acc,color:'#3b82f6',fillOpacity:.07,weight:1}).addTo(map);
     map.setView([lat,lng],14);
   } else {
     locMarker.setLatLng([lat,lng]);
-    if(locMarker.accCircle){locMarker.accCircle.setLatLng([lat,lng]);locMarker.accCircle.setRadius(acc)}
+    accCircle.setLatLng([lat,lng]);accCircle.setRadius(acc);
   }
+  if(isTracking) addTrackPt(lat,lng,pos.timestamp);
+}
+
+function onErr(e){
+  document.getElementById('banner-coords').textContent='GPS: '+e.message;
+  document.getElementById('gps-dot').className='bad';
 }
 
 // ── SUBMIT ────────────────────────────────────────────────
-async function submitLocation(){
-  if(!lastPos){showToast('No GPS fix yet','error');return}
-  const btn = document.getElementById('submit-btn');
-  btn.classList.add('loading');btn.disabled=true;
-  setStatus('Submitting...');
+async function submitLoc(){
+  if(!lastPos){toast('No GPS fix yet','err');return}
+  if(!cfg.fsurl){toast('No Feature Service URL set','err');openDrawer();return}
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='…';
+  setStatus('Submitting…');
   const {latitude:lat,longitude:lng,accuracy:acc,altitude:alt,speed:spd,heading:hdg}=lastPos.coords;
-  const attr = {
-    name: cfg.name||'Unknown',
-    car_number: cfg.car||'',
-    agency: cfg.agency||'',
-    region: cfg.region||'',
-    assigned: cfg.assigned||'',
-    notes: cfg.notes||'',
-    photo: '',
-    latitude: lat,
-    longitude: lng,
-    timestamp_utc: new Date(lastPos.timestamp).toISOString(),
-    speed_mph: spd!=null?parseFloat((spd*2.237).toFixed(1)):null,
-    heading: hdg!=null?Math.round(hdg):null
+  const attr={
+    name:cfg.name||'Unknown',
+    car_number:cfg.car||null,
+    agency:cfg.agency||null,
+    region:cfg.region||null,
+    assigned:cfg.assigned||null,
+    notes:cfg.notes||null,
+    photo:null,
+    latitude:lat,
+    longitude:lng,
+    timestamp_utc:new Date(lastPos.timestamp).toISOString(),
+    speed_mph:spd!=null?parseFloat((spd*2.237).toFixed(1)):null,
+    heading:hdg!=null?Math.round(hdg):null
   };
-  let ok=false;
-  if(!cfg.fsurl||DEMO_MODE){
-    await new Promise(r=>setTimeout(r,600));
-    ok=true;
-    console.log('[DEMO] Feature attributes:',attr);
-    addMapSubmitPin(lat,lng,attr);
+  const ok=await postFeature(lat,lng,attr);
+  btn.disabled=false;btn.textContent='Submit';
+  if(ok){
+    toast(`Submitted · ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    setStatus('Last submit: '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+    dropPin(lat,lng,attr);
   } else {
-    ok = await postToFS(lat,lng,attr);
+    toast('Submission failed — check console','err');
+    setStatus('Submit failed');
   }
-  btn.classList.remove('loading');btn.disabled=false;
-  if(ok){showToast(`Submitted: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);setStatus('Last submit: '+new Date().toLocaleTimeString())}
-  else{showToast('Submission failed','error');setStatus('Submit failed')}
 }
 
-async function postToFS(lat,lng,attr){
+async function postFeature(lat,lng,attr){
   try{
-    const feat={geometry:{x:lng,y:lat,spatialReference:{wkid:4326}},attributes:attr};
-    const params=new URLSearchParams();
-    params.append('features',JSON.stringify([feat]));
-    params.append('f','json');
-    if(cfg.token) params.append('token',cfg.token);
-    const r=await fetch(`${cfg.fsurl}/addFeatures`,{method:'POST',body:params});
+    const feat={
+      geometry:{x:lng,y:lat,spatialReference:{wkid:4326}},
+      attributes:attr
+    };
+    const body=new URLSearchParams();
+    body.append('features',JSON.stringify([feat]));
+    body.append('rollbackOnFailure','true');
+    body.append('f','json');
+    if(cfg.token) body.append('token',cfg.token);
+    const url=cfg.fsurl.replace(/\/$/,'')+'/addFeatures';
+    console.log('[FS] POST →',url);
+    console.log('[FS] Payload:',JSON.parse(body.get('features')));
+    const r=await fetch(url,{method:'POST',body});
     const j=await r.json();
-    return j.addResults&&j.addResults[0]&&j.addResults[0].success;
-  }catch(e){console.error(e);return false}
+    console.log('[FS] Response:',j);
+    if(j.error){console.error('[FS] Error:',j.error);return false}
+    return j.addResults&&j.addResults[0]&&j.addResults[0].success===true;
+  }catch(e){console.error('[FS] Exception:',e);return false}
 }
 
-function addMapSubmitPin(lat,lng,attr){
-  const icon=L.divIcon({
-    className:'',
-    html:`<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px #22c55e88"></div>`,
-    iconSize:[12,12],iconAnchor:[6,6]
-  });
-  const m=L.marker([lat,lng],{icon}).addTo(map);
-  const time=new Date(attr.timestamp_utc).toLocaleTimeString();
-  m.bindPopup(`<b>${attr.name}</b>${attr.car_number?' · '+attr.car_number:''}<br>${attr.agency?attr.agency+'<br>':''}${attr.assigned?'<i>'+attr.assigned+'</i><br>':''}${lat.toFixed(5)}, ${lng.toFixed(5)}<br>${time}${attr.notes?'<br>'+attr.notes:''}`);
+function dropPin(lat,lng,attr){
+  const icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 6px #22c55e88"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+  const t=new Date(attr.timestamp_utc).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  L.marker([lat,lng],{icon}).addTo(map)
+   .bindPopup(`<b>${attr.name}</b>${attr.car_number?' · '+attr.car_number:''}<br>${attr.agency||''}<br>${lat.toFixed(5)}, ${lng.toFixed(5)}<br>${t}${attr.notes?'<br><i>'+attr.notes+'</i>':''}`);
 }
 
 // ── LIVE TRACKING ─────────────────────────────────────────
-function toggleTracking(){
+function toggleTrack(){
   isTracking=!isTracking;
   const btn=document.getElementById('track-btn');
   const info=document.getElementById('track-info');
   if(isTracking){
-    btn.textContent='Stop Track';btn.classList.add('active');
-    info.classList.add('visible');
-    setStatus('Tracking ON');
-    if(cfg.fsurl&&!DEMO_MODE){
-      autoInterval=setInterval(()=>{if(lastPos)submitLocation()},cfg.interval*1000);
-    }
+    btn.textContent='Stop';btn.classList.add('active');
+    info.classList.add('vis');setStatus('Tracking ON');
+    autoTimer=setInterval(()=>{if(lastPos)submitLoc()},cfg.interval*1000);
   }else{
     btn.textContent='Live Track';btn.classList.remove('active');
-    clearInterval(autoInterval);autoInterval=null;
-    setStatus('Tracking OFF');
+    clearInterval(autoTimer);autoTimer=null;
+    info.classList.remove('vis');setStatus('Tracking OFF');
   }
 }
 
-function recordTrackPoint(lat,lng,ts){
-  if(trackCoords.length>0){
-    const last=trackCoords[trackCoords.length-1];
-    const dist=haversine(last[0],last[1],lat,lng);
-    if(dist<cfg.mindist) return;
+function addTrackPt(lat,lng,ts){
+  if(trackCoords.length){
+    const[plat,plng]=trackCoords[trackCoords.length-1];
+    if(haversine(plat,plng,lat,lng)<cfg.mindist) return;
   }
-  trackCoords.push([lat,lng]);
-  trackPoints.push({lat,lng,ts});
+  trackCoords.push([lat,lng]);trackPts.push({lat,lng,ts});
   if(trackLine) map.removeLayer(trackLine);
-  if(trackCoords.length>1){
-    trackLine=L.polyline(trackCoords,{color:'#f59e0b',weight:3,opacity:.8,dashArray:'6,4'}).addTo(map);
-  }
-  const totalDist=calcTotalDist();
-  document.getElementById('track-pts').textContent=`${trackCoords.length} pts`;
-  document.getElementById('track-dist').textContent=`${totalDist.toFixed(1)} mi`;
-}
-
-function calcTotalDist(){
-  let d=0;
-  for(let i=1;i<trackCoords.length;i++){
-    d+=haversine(trackCoords[i-1][0],trackCoords[i-1][1],trackCoords[i][0],trackCoords[i][1]);
-  }
-  return d/1609.34;
-}
-
-function haversine(lat1,lon1,lat2,lon2){
-  const R=6371000,r=Math.PI/180;
-  const dLat=(lat2-lat1)*r,dLon=(lon2-lon1)*r;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  if(trackCoords.length>1)
+    trackLine=L.polyline(trackCoords,{color:'#f59e0b',weight:3,opacity:.85,dashArray:'6,5'}).addTo(map);
+  const mi=totalDist()/1609.34;
+  document.getElementById('ti-pts').textContent=trackCoords.length+' pts';
+  document.getElementById('ti-dist').textContent=mi.toFixed(1)+' mi';
 }
 
 function clearTrack(){
-  trackCoords=[];trackPoints=[];
+  trackCoords=[];trackPts=[];
   if(trackLine){map.removeLayer(trackLine);trackLine=null}
-  document.getElementById('track-pts').textContent='0 pts';
-  document.getElementById('track-dist').textContent='0.0 mi';
+  document.getElementById('ti-pts').textContent='0 pts';
+  document.getElementById('ti-dist').textContent='0.0 mi';
   setStatus('Track cleared');
 }
 
+function totalDist(){
+  let d=0;
+  for(let i=1;i<trackCoords.length;i++)
+    d+=haversine(trackCoords[i-1][0],trackCoords[i-1][1],trackCoords[i][0],trackCoords[i][1]);
+  return d;
+}
+
+function haversine(a,b,c,d){
+  const R=6371000,r=Math.PI/180,dL=(c-a)*r,dN=(d-b)*r;
+  const x=Math.sin(dL/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
 // ── SETTINGS ─────────────────────────────────────────────
-function openSettings(){document.getElementById('settings-panel').classList.add('open')}
-function closeSettings(){document.getElementById('settings-panel').classList.remove('open')}
+function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('open')}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('open')}
 
 function loadCfg(){
-  const saved=localStorage.getItem('fieldtracker_cfg');
-  if(saved){cfg=Object.assign(cfg,JSON.parse(saved))}
+  try{const s=localStorage.getItem('ft2_cfg');if(s)cfg=Object.assign(cfg,JSON.parse(s))}catch(e){}
   document.getElementById('s-name').value=cfg.name;
   document.getElementById('s-agency').value=cfg.agency;
   document.getElementById('s-region').value=cfg.region;
@@ -388,23 +334,21 @@ function saveSettings(){
   cfg.token=document.getElementById('s-token').value.trim();
   cfg.interval=parseInt(document.getElementById('s-interval').value)||30;
   cfg.mindist=parseInt(document.getElementById('s-mindist').value)||10;
-  localStorage.setItem('fieldtracker_cfg',JSON.stringify(cfg));
-  closeSettings();
-  showToast('Settings saved');
+  try{localStorage.setItem('ft2_cfg',JSON.stringify(cfg))}catch(e){}
+  closeDrawer();toast('Settings saved');
 }
 
 // ── UTILS ─────────────────────────────────────────────────
-function centerMap(){if(lastPos){map.setView([lastPos.coords.latitude,lastPos.coords.longitude],16)}}
-function setStatus(msg){document.getElementById('status-msg').textContent=msg}
-
-function showToast(msg,type=''){
+function centerMap(){if(lastPos)map.setView([lastPos.coords.latitude,lastPos.coords.longitude],16)}
+function setStatus(m){document.getElementById('status-msg').textContent=m}
+function toast(msg,type=''){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.className=type+' show';
-  setTimeout(()=>t.classList.remove('show'),3000);
+  t.textContent=msg;t.className=(type?type+' ':'')+'show';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// ── START ─────────────────────────────────────────────────
 window.addEventListener('load',initMap);
+window.addEventListener('resize',()=>map&&map.invalidateSize());
 </script>
 </body>
 </html>
