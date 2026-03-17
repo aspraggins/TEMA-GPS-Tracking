@@ -1,358 +1,410 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#ffffff">
-<link rel="manifest" href="manifest.json">
-<title>ORR Sector Tracker</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/polylabel@1.1.0/dist/polylabel.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Field Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#e0e0e0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-/* Header sits above map in normal flow */
-#banner { background: #fff; border-bottom: 1px solid #dde3ed; padding: 12px 16px 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.1); position: relative; z-index: 1; }
-#banner-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7a8499; margin-bottom: 3px; }
-#sector-name { font-size: 32px; font-weight: 700; color: #1a6abf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.15; }
-#sector-name.unknown { color: #9aa0b0; font-style: italic; font-weight: 400; font-size: 22px; }
-#sector-name.flash { animation: flash 0.7s ease; }
-@keyframes flash { 0%{background:rgba(26,106,191,0.12);border-radius:4px;padding-left:6px} 100%{background:transparent;padding-left:0} }
-#status-bar { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 11px; color: #7a8499; }
-#gps-dot { width: 7px; height: 7px; border-radius: 50%; background: #b0b8c8; flex-shrink: 0; transition: background 0.3s; }
-#gps-dot.active { background: #22a84a; animation: pulse 2s infinite; }
-#gps-dot.error { background: #e03c3c; }
-#gps-dot.warn { background: #c97f0a; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+  /* ── GPS BANNER ── */
+  #banner{background:#0f0f1e;border-bottom:1px solid #333;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:52px}
+  #gps-dot{width:10px;height:10px;border-radius:50%;background:#888;flex-shrink:0;transition:background .3s}
+  #gps-dot.good{background:#22c55e;box-shadow:0 0 6px #22c55e88}
+  #gps-dot.ok{background:#f59e0b}
+  #gps-dot.bad{background:#ef4444}
+  #banner-coords{font-size:13px;font-family:monospace;color:#a3e635;flex:1;min-width:200px}
+  #banner-meta{font-size:11px;color:#888;display:flex;gap:14px;flex-wrap:wrap}
+  #banner-meta span{white-space:nowrap}
+  .acc-good{color:#22c55e}
+  .acc-ok{color:#f59e0b}
+  .acc-bad{color:#ef4444}
 
-#alert-banner { display: none; background: #edfaf1; border-bottom: 2px solid #22a84a; padding: 8px 16px; font-size: 13px; color: #1a7a3a; font-weight: 600; position: relative; z-index: 1; }
-#alert-banner.visible { display: block; animation: slideDown 0.3s ease; }
-@keyframes slideDown { from{transform:translateY(-8px);opacity:0} to{transform:translateY(0);opacity:1} }
+  /* ── TOOLBAR ── */
+  #toolbar{background:#0f1b2d;border-bottom:1px solid #1e3a5f;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{padding:6px 14px;border-radius:6px;border:1px solid #2a4a6b;background:#1a2f4a;color:#90caf9;font-size:13px;cursor:pointer;transition:background .15s}
+  button:hover{background:#1e3f64}
+  button.danger{border-color:#4a1a1a;background:#2a1010;color:#f87171}
+  button.danger:hover{background:#3a1515}
+  button.active{background:#1565c0;border-color:#1976d2;color:#fff}
+  button.submit-btn{background:#155724;border-color:#1e6e38;color:#90ee90;font-weight:600}
+  button.submit-btn:hover{background:#1a6e2e}
+  button.submit-btn.loading{opacity:.6;cursor:not-allowed}
+  #settings-btn{margin-left:auto}
+  #status-msg{font-size:12px;color:#888;padding:0 4px}
 
-/* Map fills all remaining space below header */
-#map { width: 100%; height: calc(100vh - var(--header-h, 90px)); }
-.leaflet-container { background: #e8e4dc !important; }
+  /* ── MAP ── */
+  #map{flex:1;z-index:1}
 
-#controls { position: fixed; bottom: 20px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
-.ctrl-btn { width: 44px; height: 44px; background: #fff; border: 1px solid #dde3ed; border-radius: 8px; color: #1a1f2e; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.ctrl-btn:active { background: #f0f3f8; }
+  /* ── SETTINGS PANEL ── */
+  #settings-panel{position:absolute;top:0;right:0;width:320px;height:100%;background:#0f1b2d;border-left:1px solid #1e3a5f;z-index:1000;display:none;flex-direction:column;overflow-y:auto}
+  #settings-panel.open{display:flex}
+  #settings-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e3a5f}
+  #settings-header h2{font-size:15px;font-weight:600;color:#90caf9}
+  #close-settings{background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:0 4px}
+  #close-settings:hover{color:#fff}
+  .settings-body{padding:16px;display:flex;flex-direction:column;gap:16px}
+  .field-group{display:flex;flex-direction:column;gap:5px}
+  .field-group label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em}
+  .field-group input,.field-group textarea,.field-group select{background:#0a121f;border:1px solid #1e3a5f;border-radius:6px;color:#e0e0e0;padding:8px 10px;font-size:14px;width:100%}
+  .field-group input:focus,.field-group textarea:focus{outline:none;border-color:#1976d2}
+  .field-group textarea{resize:vertical;min-height:70px;font-family:system-ui}
+  .settings-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#1976d2;margin-top:4px}
+  .save-row{display:flex;justify-content:flex-end;margin-top:8px}
+  .save-row button{background:#155724;border-color:#1e6e38;color:#90ee90}
+  .save-row button:hover{background:#1a6e2e}
 
-#splash { position: fixed; inset: 0; z-index: 9999; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-#splash-pulse { width: 72px; height: 72px; border-radius: 50%; background: rgba(26,106,191,0.12); display: flex; align-items: center; justify-content: center; animation: sp 1.8s ease-in-out infinite; }
-@keyframes sp { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
-#splash h1 { font-size: 26px; font-weight: 700; color: #1a6abf; }
-#splash p { font-size: 15px; color: #7a8499; }
-#splash button { padding: 14px 48px; background: #1a6abf; border: none; border-radius: 10px; color: #fff; font-size: 18px; font-weight: 600; cursor: pointer; -webkit-appearance: none; }
+  /* ── TOAST ── */
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e3a1e;color:#90ee90;border:1px solid #2e6e2e;padding:10px 20px;border-radius:8px;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none}
+  #toast.error{background:#3a1e1e;color:#f87171;border-color:#6e2e2e}
+  #toast.show{opacity:1}
 
-#config-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; align-items: flex-end; justify-content: center; }
-#config-overlay.open { display: flex; }
-#config-panel { background: #fff; border: 1px solid #dde3ed; border-radius: 14px 14px 0 0; padding: 20px 16px 36px; width: 100%; max-width: 500px; }
-#config-panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #1a1f2e; }
-.fg { margin-bottom: 13px; }
-.fg label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #7a8499; display: block; margin-bottom: 5px; }
-.fg input, .fg select { width: 100%; padding: 8px 10px; background: #f5f7fa; border: 1px solid #dde3ed; border-radius: 6px; color: #1a1f2e; font-size: 13px; }
-.fg input:focus, .fg select:focus { outline: none; border-color: #1a6abf; }
-.chk-row { display: flex; align-items: center; gap: 10px; }
-.chk-row input[type=checkbox] { width: 16px; height: 16px; accent-color: #1a6abf; flex-shrink: 0; }
-.chk-row label { font-size: 13px; color: #1a1f2e; font-weight: 400; text-transform: none; letter-spacing: 0; }
-#save-btn { width: 100%; padding: 10px; background: #1a6abf; border: none; border-radius: 6px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; }
-#close-cfg { float: right; background: none; border: none; color: #7a8499; font-size: 20px; cursor: pointer; }
+  /* ── LEAFLET overrides ── */
+  .leaflet-control-attribution{font-size:10px}
+  .loc-marker-inner{width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 8px #3b82f688}
+  .loc-pulse{width:40px;height:40px;border-radius:50%;background:#3b82f622;border:1px solid #3b82f655;position:absolute;top:-13px;left:-13px;animation:pulse 2s infinite}
+  @keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2);opacity:0}}
+  .track-marker{width:10px;height:10px;border-radius:50%;background:#f59e0b55;border:1px solid #f59e0b;box-shadow:0 0 4px #f59e0b44}
 
-.sector-label { background: none; border: none; box-shadow: none; font-size: 11px; font-weight: 700; color: #1a6abf; text-align: center; white-space: nowrap; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; pointer-events: none; }
+  /* ── TRACK INFO ── */
+  #track-info{position:absolute;bottom:10px;left:10px;z-index:500;background:#0f1b2dcc;backdrop-filter:blur(4px);border:1px solid #1e3a5f;border-radius:8px;padding:8px 12px;font-size:12px;color:#90caf9;display:none}
+  #track-info.visible{display:block}
 </style>
 </head>
 <body>
 
-<!-- Header in normal document flow, above the map -->
+<!-- GPS BANNER -->
 <div id="banner">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-    <div style="flex:1;min-width:0;">
-      <div id="banner-label">ORR Sector</div>
-      <div id="sector-name" class="unknown">Locating…</div>
-    </div>
-    <button class="ctrl-btn" id="cfg-btn" style="margin-left:12px;flex-shrink:0;width:36px;height:36px;font-size:15px;">⚙</button>
-  </div>
-  <div id="status-bar">
-    <div id="gps-dot"></div>
-    <span id="gps-status">Starting…</span>
-    <span id="coords-display" style="margin-left:auto;font-size:10px;"></span>
+  <div id="gps-dot"></div>
+  <div id="banner-coords">Acquiring GPS...</div>
+  <div id="banner-meta">
+    <span id="meta-acc">Acc: —</span>
+    <span id="meta-alt">Alt: —</span>
+    <span id="meta-spd">Spd: —</span>
+    <span id="meta-hdg">Hdg: —</span>
+    <span id="meta-time">—</span>
   </div>
 </div>
-<div id="alert-banner">Entered: <span id="alert-text"></span></div>
 
-<!-- Map sits directly below header -->
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <button class="submit-btn" id="submit-btn" onclick="submitLocation()">Submit Location</button>
+  <button id="track-btn" onclick="toggleTracking()">Live Track</button>
+  <button id="center-btn" onclick="centerMap()">Center</button>
+  <button class="danger" id="clear-btn" onclick="clearTrack()">Clear Track</button>
+  <span id="status-msg">Ready</span>
+  <button id="settings-btn" onclick="openSettings()">Settings</button>
+</div>
+
+<!-- MAP -->
 <div id="map"></div>
-
-<div id="controls">
-  <button class="ctrl-btn" id="center-btn">◎</button>
-  <button class="ctrl-btn" id="reload-btn">↺</button>
+<div id="track-info">
+  <span id="track-pts">0 pts</span> &nbsp;|&nbsp; <span id="track-dist">0.0 mi</span>
 </div>
 
-<div id="splash">
-  <div id="splash-pulse">
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1a6abf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-    </svg>
+<!-- SETTINGS PANEL -->
+<div id="settings-panel">
+  <div id="settings-header">
+    <h2>Responder Settings</h2>
+    <button id="close-settings" onclick="closeSettings()">✕</button>
   </div>
-  <h1>ORR Sector Tracker</h1>
-  <p>Tap to start tracking</p>
-  <button id="start-btn">Start</button>
-</div>
-
-<div id="config-overlay">
-  <div id="config-panel">
-    <button id="close-cfg">✕</button>
-    <h2>Settings</h2>
-    <div class="fg">
-      <label>Voice</label>
-      <select id="cfg-voice"></select>
+  <div class="settings-body">
+    <div class="settings-section-title">Identity</div>
+    <div class="field-group">
+      <label>Name</label>
+      <input type="text" id="s-name" placeholder="Full name"/>
     </div>
-    <div class="fg">
-      <label>Alert on specific sector (blank = any)</label>
-      <input type="text" id="cfg-alert-sector" placeholder="exact sector name">
+    <div class="field-group">
+      <label>Agency</label>
+      <input type="text" id="s-agency" placeholder="e.g. TEMA, Hamilton Co EMA"/>
     </div>
-    <div class="fg chk-row">
-      <input type="checkbox" id="cfg-alert-any">
-      <label for="cfg-alert-any">Alert + vibrate on every boundary crossing</label>
+    <div class="field-group">
+      <label>Region</label>
+      <input type="text" id="s-region" placeholder="e.g. West TN"/>
     </div>
-    <button id="save-btn">Save &amp; Apply</button>
+    <div class="field-group">
+      <label>Car Number</label>
+      <input type="text" id="s-car" placeholder="e.g. ESC-7"/>
+    </div>
+    <div class="field-group">
+      <label>Assigned</label>
+      <input type="text" id="s-assigned" placeholder="Current assignment or mission"/>
+    </div>
+    <div class="settings-section-title" style="margin-top:4px">Feature Service</div>
+    <div class="field-group">
+      <label>ArcGIS Feature Service URL</label>
+      <input type="text" id="s-fsurl" placeholder="https://.../FeatureServer/0"/>
+    </div>
+    <div class="field-group">
+      <label>Token (optional)</label>
+      <input type="text" id="s-token" placeholder="ArcGIS token or leave blank"/>
+    </div>
+    <div class="settings-section-title" style="margin-top:4px">Notes</div>
+    <div class="field-group">
+      <label>Notes</label>
+      <textarea id="s-notes" placeholder="Mission notes, assignment, etc."></textarea>
+    </div>
+    <div class="settings-section-title" style="margin-top:4px">Tracking</div>
+    <div class="field-group">
+      <label>Auto-submit interval (seconds)</label>
+      <input type="number" id="s-interval" value="30" min="5" max="300"/>
+    </div>
+    <div class="field-group">
+      <label>Min distance filter (meters)</label>
+      <input type="number" id="s-mindist" value="10" min="0" max="500"/>
+    </div>
+    <div class="save-row">
+      <button onclick="saveSettings()">Save Settings</button>
+    </div>
   </div>
 </div>
+
+<!-- TOAST -->
+<div id="toast"></div>
 
 <script>
-const FS_BASE = 'https://services1.arcgis.com/kILp9lqGUeOhnDbI/arcgis/rest/services/ORR_Sectors_view/FeatureServer';
-const FIELD   = 'SEC_NAME';
+const DEMO_MODE = false;
 
-let cfg = { url: FS_BASE, layer: 0, field: FIELD, alertSector: '', alertAny: true, voiceName: '' };
-try { Object.assign(cfg, JSON.parse(localStorage.getItem('orrCfg') || '{}')); } catch(e) {}
-function saveCfg() { try { localStorage.setItem('orrCfg', JSON.stringify(cfg)); } catch(e) {} }
-function layerUrl() { return cfg.url + '/' + cfg.layer; }
+let map, locMarker, trackLine, watchId=null, isTracking=false;
+let lastPos=null, trackCoords=[], trackPoints=[], autoInterval=null;
+let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',fsurl:'https://services8.arcgis.com/hHiNEOyFVAr0vW21/arcgis/rest/services/service_0fc5bb1784aa47fa8c9a0e1b3bf6e425/FeatureServer/0',token:'',interval:30,mindist:10};
 
-// Set map height to fill remaining space below header
-function setMapHeight() {
-  const hh = document.getElementById('banner').offsetHeight +
-             (document.getElementById('alert-banner').offsetHeight || 0);
-  document.getElementById('map').style.height = (window.innerHeight - hh) + 'px';
-  map.invalidateSize();
+// ── INIT MAP ──────────────────────────────────────────────
+function initMap(){
+  map = L.map('map',{zoomControl:true}).setView([35.8,-86.4],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap',maxZoom:19
+  }).addTo(map);
+  // alt: ESRI satellite
+  // L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'ESRI'}).addTo(map);
+  loadCfg();
+  startWatch();
 }
 
-const map = L.map('map', { zoomControl: false, attributionControl: false, tap: false });
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(map);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(map);
-map.setView([35.9, -84.0], 9);
-
-let sectorLayer = null, labelLayer = null, locMarker = null, accCircle = null;
-let currentSector = null, watchId = null, alertTimer = null, qTimer = null, extentTimer = null;
-let spokeSector = false;
-
-// Speech
-let selectedVoice = null;
-function loadVoices() {
-  if (!window.speechSynthesis) return;
-  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
-  const sel = document.getElementById('cfg-voice');
-  if (!sel || voices.length === 0) return;
-  sel.innerHTML = voices.map((v, i) => '<option value="' + i + '"' + (v.name === cfg.voiceName ? ' selected' : '') + '>' + v.name + ' (' + v.lang + ')</option>').join('');
-  selectedVoice = voices.find(v => v.name === cfg.voiceName) || voices[0];
-}
-if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
-
-function speak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  if (selectedVoice) u.voice = selectedVoice;
-  u.rate = 0.95; u.pitch = 1; u.volume = 1;
-  window.speechSynthesis.speak(u);
-}
-
-// Polylabel centroid
-function featCentroid(feat) {
-  const g = feat.geometry;
-  try {
-    let coords;
-    if (g.type === 'Polygon') coords = g.coordinates;
-    else if (g.type === 'MultiPolygon') coords = g.coordinates.reduce((a, b) => b[0].length > a[0].length ? b : a);
-    if (coords) { const p = polylabel(coords, 0.001); return L.latLng(p[1], p[0]); }
-  } catch(e) {}
-  return L.geoJSON(feat).getBounds().getCenter();
-}
-
-async function reloadSectors() {
-  if (sectorLayer) { map.removeLayer(sectorLayer); sectorLayer = null; }
-  if (labelLayer)  { map.removeLayer(labelLayer);  labelLayer  = null; }
-  setDot('warn'); setMsg('Loading sectors…');
-  const q = layerUrl() + '/query?where=1%3D1&outFields=' + encodeURIComponent(cfg.field) + '&returnGeometry=true&f=geojson';
-  try {
-    const res = await fetch(q);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const n = data.features ? data.features.length : 0;
-    sectorLayer = L.geoJSON(data, {
-      style: { color: '#1a6abf', weight: 2, opacity: 0.9, fillOpacity: 0.04, fillColor: '#1a6abf' },
-      onEachFeature: function(feat, lyr) { lyr.on('click', function(e) { L.DomEvent.stopPropagation(e); }); }
-    }).addTo(map);
-    labelLayer = L.layerGroup();
-    data.features.forEach(function(feat) {
-      const name = feat.properties[cfg.field];
-      if (!name || !feat.geometry) return;
-      L.marker(featCentroid(feat), {
-        icon: L.divIcon({ className: 'sector-label', html: name, iconSize: null }),
-        interactive: false
-      }).addTo(labelLayer);
-    });
-    labelLayer.addTo(map);
-    map.on('zoomend', function() {
-      map.getZoom() >= 10 ? (!map.hasLayer(labelLayer) && map.addLayer(labelLayer)) : (map.hasLayer(labelLayer) && map.removeLayer(labelLayer));
-    });
-    if (map.getZoom() < 10) map.removeLayer(labelLayer);
-    if (n > 0 && !locMarker) map.fitBounds(sectorLayer.getBounds(), { padding: [20, 20] });
-    setDot('active'); setMsg(n + ' sectors loaded');
-  } catch(e) { setDot('error'); setMsg('Sector load failed'); console.error(e); }
-}
-
-function startGPS() {
-  if (!navigator.geolocation) { setDot('error'); setMsg('Geolocation not supported'); return; }
-  if (watchId != null) navigator.geolocation.clearWatch(watchId);
-  setMsg('Acquiring GPS…');
-  watchId = navigator.geolocation.watchPosition(onPos, onGpsErr, { enableHighAccuracy: true, maximumAge: 4000, timeout: 20000 });
-}
-
-function onPos(pos) {
-  const lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
-  document.getElementById('coords-display').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-  setDot('active'); setMsg('GPS ±' + Math.round(acc) + ' m');
-  const ll = [lat, lng];
-  if (!locMarker) {
-    locMarker = L.circleMarker(ll, { radius: 9, color: '#fff', fillColor: '#1a6abf', fillOpacity: 1, weight: 2.5, zIndexOffset: 1000 }).addTo(map);
-    accCircle = L.circle(ll, { radius: acc, color: '#1a6abf', fillColor: '#1a6abf', fillOpacity: 0.08, weight: 0.5 }).addTo(map);
-  } else {
-    locMarker.setLatLng(ll);
-    accCircle.setLatLng(ll).setRadius(acc);
-  }
-  clearTimeout(qTimer);
-  qTimer = setTimeout(function() { doQuery(lat, lng); }, 600);
-  clearTimeout(extentTimer);
-  extentTimer = setTimeout(function() { updateMapExtent(lat, lng); }, 1500);
-}
-
-function onGpsErr(e) {
-  const m = { 1: 'Location permission denied', 2: 'Position unavailable', 3: 'GPS timed out' };
-  setDot('error'); setMsg(m[e.code] || 'GPS error');
-}
-
-function updateMapExtent(lat, lng) {
-  if (!sectorLayer) return;
-  const pt = L.latLng(lat, lng);
-  let minDist = Infinity;
-  sectorLayer.eachLayer(function(lyr) {
-    if (lyr.getBounds) {
-      const b = lyr.getBounds();
-      const nearest = L.latLng(Math.max(b.getSouth(), Math.min(lat, b.getNorth())), Math.max(b.getWest(), Math.min(lng, b.getEast())));
-      const d = pt.distanceTo(nearest);
-      if (d < minDist) minDist = d;
-    }
+// ── GPS WATCH ─────────────────────────────────────────────
+function startWatch(){
+  if(!navigator.geolocation){showToast('Geolocation not supported','error');return}
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+    enableHighAccuracy:true,maximumAge:5000,timeout:15000
   });
-  if (minDist < 5000) {
-    const bufferDeg = Math.max(0.01, minDist / 111000 * 3);
-    map.fitBounds(L.latLngBounds([lat - bufferDeg, lng - bufferDeg], [lat + bufferDeg, lng + bufferDeg]), { padding: [40, 40], maxZoom: 14, animate: true });
+}
+
+function onPos(pos){
+  const {latitude:lat,longitude:lng,accuracy:acc,altitude:alt,speed:spd,heading:hdg} = pos.coords;
+  lastPos = pos;
+  updateBanner(lat,lng,acc,alt,spd,hdg,pos.timestamp);
+  updateMarker(lat,lng,acc);
+  if(isTracking) recordTrackPoint(lat,lng,pos.timestamp);
+}
+
+function onErr(e){
+  document.getElementById('banner-coords').textContent='GPS error: '+e.message;
+  document.getElementById('gps-dot').className='bad';
+}
+
+function updateBanner(lat,lng,acc,alt,spd,hdg,ts){
+  const dot = document.getElementById('gps-dot');
+  dot.className = acc<10?'good':acc<30?'ok':'bad';
+  const accCls = acc<10?'acc-good':acc<30?'acc-ok':'acc-bad';
+  document.getElementById('banner-coords').textContent =
+    `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  document.getElementById('meta-acc').innerHTML =
+    `Acc: <span class="${accCls}">±${Math.round(acc)}m</span>`;
+  document.getElementById('meta-alt').textContent =
+    alt!=null?`Alt: ${Math.round(alt)}m`:'Alt: —';
+  document.getElementById('meta-spd').textContent =
+    spd!=null?`Spd: ${(spd*2.237).toFixed(1)}mph`:'Spd: —';
+  document.getElementById('meta-hdg').textContent =
+    hdg!=null?`Hdg: ${Math.round(hdg)}°`:'Hdg: —';
+  document.getElementById('meta-time').textContent =
+    new Date(ts).toLocaleTimeString();
+}
+
+// ── MAP MARKER ────────────────────────────────────────────
+function updateMarker(lat,lng,acc){
+  if(!locMarker){
+    const icon = L.divIcon({
+      className:'',
+      html:'<div style="position:relative"><div class="loc-pulse"></div><div class="loc-marker-inner"></div></div>',
+      iconSize:[14,14],iconAnchor:[7,7]
+    });
+    locMarker = L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
+    if(acc>0) locMarker.accCircle = L.circle([lat,lng],{radius:acc,color:'#3b82f6',fillOpacity:.08,weight:1}).addTo(map);
+    map.setView([lat,lng],14);
   } else {
-    map.fitBounds(sectorLayer.getBounds().extend(pt), { padding: [40, 40], maxZoom: 11, animate: true });
+    locMarker.setLatLng([lat,lng]);
+    if(locMarker.accCircle){locMarker.accCircle.setLatLng([lat,lng]);locMarker.accCircle.setRadius(acc)}
   }
 }
 
-async function doQuery(lat, lng) {
-  const geom = encodeURIComponent(JSON.stringify({ x: lng, y: lat, spatialReference: { wkid: 4326 } }));
-  const url = layerUrl() + '/query?geometry=' + geom + '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelWithin&outFields=' + encodeURIComponent(cfg.field) + '&returnGeometry=false&f=json';
-  try {
-    const data = await (await fetch(url)).json();
-    const feat = data.features && data.features[0];
-    setSector(feat ? (feat.attributes[cfg.field] || 'Unknown') : null);
-  } catch(e) { console.warn('Query error:', e); }
+// ── SUBMIT ────────────────────────────────────────────────
+async function submitLocation(){
+  if(!lastPos){showToast('No GPS fix yet','error');return}
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading');btn.disabled=true;
+  setStatus('Submitting...');
+  const {latitude:lat,longitude:lng,accuracy:acc,altitude:alt,speed:spd,heading:hdg}=lastPos.coords;
+  const attr = {
+    name: cfg.name||'Unknown',
+    car_number: cfg.car||'',
+    agency: cfg.agency||'',
+    region: cfg.region||'',
+    assigned: cfg.assigned||'',
+    notes: cfg.notes||'',
+    photo: '',
+    latitude: lat,
+    longitude: lng,
+    timestamp_utc: new Date(lastPos.timestamp).toISOString(),
+    speed_mph: spd!=null?parseFloat((spd*2.237).toFixed(1)):null,
+    heading: hdg!=null?Math.round(hdg):null
+  };
+  let ok=false;
+  if(!cfg.fsurl||DEMO_MODE){
+    await new Promise(r=>setTimeout(r,600));
+    ok=true;
+    console.log('[DEMO] Feature attributes:',attr);
+    addMapSubmitPin(lat,lng,attr);
+  } else {
+    ok = await postToFS(lat,lng,attr);
+  }
+  btn.classList.remove('loading');btn.disabled=false;
+  if(ok){showToast(`Submitted: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);setStatus('Last submit: '+new Date().toLocaleTimeString())}
+  else{showToast('Submission failed','error');setStatus('Submit failed')}
 }
 
-function setSector(name) {
-  const el = document.getElementById('sector-name');
-  const prev = currentSector;
-  if (name === prev) {
-    if (!spokeSector) {
-      spokeSector = true;
-      if (!name) { el.textContent = 'Outside sector coverage'; el.className = 'unknown'; speak('Outside sector coverage'); }
-      else { el.textContent = name; el.className = ''; speak('Sector: ' + name); }
+async function postToFS(lat,lng,attr){
+  try{
+    const feat={geometry:{x:lng,y:lat,spatialReference:{wkid:4326}},attributes:attr};
+    const params=new URLSearchParams();
+    params.append('features',JSON.stringify([feat]));
+    params.append('f','json');
+    if(cfg.token) params.append('token',cfg.token);
+    const r=await fetch(`${cfg.fsurl}/addFeatures`,{method:'POST',body:params});
+    const j=await r.json();
+    return j.addResults&&j.addResults[0]&&j.addResults[0].success;
+  }catch(e){console.error(e);return false}
+}
+
+function addMapSubmitPin(lat,lng,attr){
+  const icon=L.divIcon({
+    className:'',
+    html:`<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px #22c55e88"></div>`,
+    iconSize:[12,12],iconAnchor:[6,6]
+  });
+  const m=L.marker([lat,lng],{icon}).addTo(map);
+  const time=new Date(attr.timestamp_utc).toLocaleTimeString();
+  m.bindPopup(`<b>${attr.name}</b>${attr.car_number?' · '+attr.car_number:''}<br>${attr.agency?attr.agency+'<br>':''}${attr.assigned?'<i>'+attr.assigned+'</i><br>':''}${lat.toFixed(5)}, ${lng.toFixed(5)}<br>${time}${attr.notes?'<br>'+attr.notes:''}`);
+}
+
+// ── LIVE TRACKING ─────────────────────────────────────────
+function toggleTracking(){
+  isTracking=!isTracking;
+  const btn=document.getElementById('track-btn');
+  const info=document.getElementById('track-info');
+  if(isTracking){
+    btn.textContent='Stop Track';btn.classList.add('active');
+    info.classList.add('visible');
+    setStatus('Tracking ON');
+    if(cfg.fsurl&&!DEMO_MODE){
+      autoInterval=setInterval(()=>{if(lastPos)submitLocation()},cfg.interval*1000);
     }
-    return;
+  }else{
+    btn.textContent='Live Track';btn.classList.remove('active');
+    clearInterval(autoInterval);autoInterval=null;
+    setStatus('Tracking OFF');
   }
-  currentSector = name;
-  if (!name) {
-    el.textContent = 'Outside sector coverage'; el.className = 'unknown';
-    if (spokeSector) speak('Outside sector coverage');
-    spokeSector = true; return;
+}
+
+function recordTrackPoint(lat,lng,ts){
+  if(trackCoords.length>0){
+    const last=trackCoords[trackCoords.length-1];
+    const dist=haversine(last[0],last[1],lat,lng);
+    if(dist<cfg.mindist) return;
   }
-  el.textContent = name; el.className = '';
-  void el.offsetWidth; el.classList.add('flash');
-  fireAlert(name);
-  speak(spokeSector ? 'Entering ' + name : 'Sector: ' + name);
-  spokeSector = true;
-}
-
-function fireAlert(name) {
-  const hit = cfg.alertAny || (cfg.alertSector && name.toLowerCase() === cfg.alertSector.toLowerCase());
-  if (!hit) return;
-  const ab = document.getElementById('alert-banner');
-  document.getElementById('alert-text').textContent = name;
-  ab.classList.add('visible');
-  clearTimeout(alertTimer);
-  alertTimer = setTimeout(function() { ab.classList.remove('visible'); }, 5000);
-  if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
-}
-
-function setDot(s) { document.getElementById('gps-dot').className = s; }
-function setMsg(m) { document.getElementById('gps-status').textContent = m; }
-function centerOnMe() { if (locMarker) map.setView(locMarker.getLatLng(), 14); }
-
-function openConfig() {
-  loadVoices();
-  document.getElementById('cfg-alert-sector').value = cfg.alertSector;
-  document.getElementById('cfg-alert-any').checked = cfg.alertAny;
-  document.getElementById('config-overlay').classList.add('open');
-}
-function closeConfig() { document.getElementById('config-overlay').classList.remove('open'); }
-
-function saveConfig() {
-  const voices = window.speechSynthesis ? window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en')) : [];
-  const vi = parseInt(document.getElementById('cfg-voice').value);
-  if (!isNaN(vi) && voices[vi]) { selectedVoice = voices[vi]; cfg.voiceName = voices[vi].name; speak('Voice selected'); }
-  cfg.alertSector = document.getElementById('cfg-alert-sector').value.trim();
-  cfg.alertAny    = document.getElementById('cfg-alert-any').checked;
-  saveCfg(); closeConfig();
-}
-
-document.getElementById('start-btn').addEventListener('click', function() {
-  if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); u.volume = 0; window.speechSynthesis.speak(u); }
-  document.getElementById('splash').style.display = 'none';
-  setMapHeight();
-  reloadSectors();
-  startGPS();
-});
-
-window.addEventListener('resize', setMapHeight);
-document.getElementById('cfg-btn').addEventListener('click', openConfig);
-document.getElementById('close-cfg').addEventListener('click', closeConfig);
-document.getElementById('save-btn').addEventListener('click', saveConfig);
-document.getElementById('center-btn').addEventListener('click', centerOnMe);
-document.getElementById('reload-btn').addEventListener('click', reloadSectors);
-document.getElementById('config-overlay').addEventListener('click', function(e) { if (e.target === this) closeConfig(); });
-
-try {
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  trackCoords.push([lat,lng]);
+  trackPoints.push({lat,lng,ts});
+  if(trackLine) map.removeLayer(trackLine);
+  if(trackCoords.length>1){
+    trackLine=L.polyline(trackCoords,{color:'#f59e0b',weight:3,opacity:.8,dashArray:'6,4'}).addTo(map);
   }
-} catch(e) {}
+  const totalDist=calcTotalDist();
+  document.getElementById('track-pts').textContent=`${trackCoords.length} pts`;
+  document.getElementById('track-dist').textContent=`${totalDist.toFixed(1)} mi`;
+}
+
+function calcTotalDist(){
+  let d=0;
+  for(let i=1;i<trackCoords.length;i++){
+    d+=haversine(trackCoords[i-1][0],trackCoords[i-1][1],trackCoords[i][0],trackCoords[i][1]);
+  }
+  return d/1609.34;
+}
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000,r=Math.PI/180;
+  const dLat=(lat2-lat1)*r,dLon=(lon2-lon1)*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function clearTrack(){
+  trackCoords=[];trackPoints=[];
+  if(trackLine){map.removeLayer(trackLine);trackLine=null}
+  document.getElementById('track-pts').textContent='0 pts';
+  document.getElementById('track-dist').textContent='0.0 mi';
+  setStatus('Track cleared');
+}
+
+// ── SETTINGS ─────────────────────────────────────────────
+function openSettings(){document.getElementById('settings-panel').classList.add('open')}
+function closeSettings(){document.getElementById('settings-panel').classList.remove('open')}
+
+function loadCfg(){
+  const saved=localStorage.getItem('fieldtracker_cfg');
+  if(saved){cfg=Object.assign(cfg,JSON.parse(saved))}
+  document.getElementById('s-name').value=cfg.name;
+  document.getElementById('s-agency').value=cfg.agency;
+  document.getElementById('s-region').value=cfg.region;
+  document.getElementById('s-car').value=cfg.car;
+  document.getElementById('s-assigned').value=cfg.assigned;
+  document.getElementById('s-notes').value=cfg.notes;
+  document.getElementById('s-fsurl').value=cfg.fsurl;
+  document.getElementById('s-token').value=cfg.token;
+  document.getElementById('s-interval').value=cfg.interval;
+  document.getElementById('s-mindist').value=cfg.mindist;
+}
+
+function saveSettings(){
+  cfg.name=document.getElementById('s-name').value.trim();
+  cfg.agency=document.getElementById('s-agency').value.trim();
+  cfg.region=document.getElementById('s-region').value.trim();
+  cfg.car=document.getElementById('s-car').value.trim();
+  cfg.assigned=document.getElementById('s-assigned').value.trim();
+  cfg.notes=document.getElementById('s-notes').value.trim();
+  cfg.fsurl=document.getElementById('s-fsurl').value.trim().replace(/\/$/,'');
+  cfg.token=document.getElementById('s-token').value.trim();
+  cfg.interval=parseInt(document.getElementById('s-interval').value)||30;
+  cfg.mindist=parseInt(document.getElementById('s-mindist').value)||10;
+  localStorage.setItem('fieldtracker_cfg',JSON.stringify(cfg));
+  closeSettings();
+  showToast('Settings saved');
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function centerMap(){if(lastPos){map.setView([lastPos.coords.latitude,lastPos.coords.longitude],16)}}
+function setStatus(msg){document.getElementById('status-msg').textContent=msg}
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── START ─────────────────────────────────────────────────
+window.addEventListener('load',initMap);
 </script>
 </body>
 </html>
