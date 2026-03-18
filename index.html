@@ -85,21 +85,17 @@
     background: #0a1628;
     border-bottom: 1px solid #1e3a5f;
     padding: 6px 8px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
     gap: 6px;
-    align-items: center;
     flex-shrink: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
   }
-  #toolbar::-webkit-scrollbar { display: none; }
 
   .tb-btn {
     flex-shrink: 0;
-    padding: 0 14px;
-    height: 38px;
+    padding: 0 8px;
+    height: 42px;
     border-radius: 7px;
     border: 1px solid #1e3a5f;
     background: #0f1e33;
@@ -112,6 +108,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
   }
   .tb-btn:active { opacity: .7; transform: scale(.97); }
   .tb-btn.active { background: #1565c0; border-color: #2196f3; color: #fff; }
@@ -121,10 +118,12 @@
   #status-msg {
     font-size: 11px;
     color: #555;
-    flex-shrink: 0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    grid-column: 1 / -1;
+    text-align: center;
     padding: 0 4px;
-    margin-left: auto;
   }
 
   /* ── MAP ────────────────────────────────────── */
