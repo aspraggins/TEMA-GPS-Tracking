@@ -86,7 +86,7 @@
     border-bottom: 1px solid #1e3a5f;
     padding: 6px 8px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 6px;
     flex-shrink: 0;
   }
@@ -305,6 +305,7 @@
     <div id="banner-row1">
       <div id="gps-dot"></div>
       <div id="banner-coords">Acquiring GPS…</div>
+      <button class="tb-btn" onclick="openDrawer()" style="flex-shrink:0;width:42px;height:36px;font-size:18px;margin-left:6px;border-radius:7px;">⚙</button>
     </div>
     <div id="banner-row2">
       <div class="bmeta">Acc: <span id="m-acc">—</span></div>
@@ -321,7 +322,6 @@
     <button class="tb-btn" id="track-btn" onclick="toggleTrack()">Track</button>
     <button class="tb-btn" id="center-btn" onclick="centerMap()">Center</button>
     <button class="tb-btn red" onclick="clearTrack()">Clear</button>
-    <button class="tb-btn" onclick="openDrawer()">⚙</button>
   </div>
 
   <!-- MAP -->
