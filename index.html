@@ -366,12 +366,6 @@
     <div class="fg"><label>Notes</label>
       <textarea id="s-notes" placeholder="Mission notes…"></textarea></div>
 
-    <div class="sec-label">Feature Service</div>
-    <div class="fg"><label>FeatureServer Layer URL</label>
-      <input id="s-fsurl" type="url" placeholder="…/FeatureServer/0" inputmode="url" autocorrect="off" autocapitalize="none"/></div>
-    <div class="fg"><label>Token (if required)</label>
-      <input id="s-token" type="text" placeholder="ArcGIS token" autocorrect="off" autocapitalize="none"/></div>
-
     <div class="sec-label">Tracking</div>
     <div class="fg"><label>Auto-submit interval (sec)</label>
       <input id="s-interval" type="number" value="30" min="5" max="300" inputmode="numeric"/></div>
@@ -387,14 +381,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-const DEFAULT_FS = 'https://services8.arcgis.com/hHiNEOyFVAr0vW21/arcgis/rest/services/service_0fc5bb1784aa47fa8c9a0e1b3bf6e425/FeatureServer/0';
+const FS_URL = 'https://services1.arcgis.com/kILp9lqGUeOhnDbI/arcgis/rest/services/service_d68fab51155d4f54b9fc6c270cb869e4_form/FeatureServer/0';
+const API_KEY = 'AAPTazhRcsXx2zds21YpZp1-dFg..EKg3yrraSGbd2qlXMFPcE7ilLY-lQXdcsVGnREQKbpnHsT7nl2-Du58axyZGZvotCPNJuDL9QQBqsQbOoDlXiMII8RVBc_Jqh7DBv6gQo0RYXMb1diY5vnTQVEE79BfWKdObuGLTf0rCGa64lpZoB8b7CObi1w3UGCTFmFS4kOFsUM80-zYj8uqMm7S0Uuw2cOZu6XKoDjp_Kn46AeWYQTROcup08-iTJNm4djJSzSlvXQwn6t1iQCrcD9G4Zt4OJBd59H0mRJnTQ_H6NA..AT1_OYyZ5OcC';
 
 let map, locMarker, accCircle, trackLine;
 let isTracking = false, autoTimer = null;
 let lastPos = null, trackCoords = [], trackPts = [];
 let cfg = {
   name:'', agency:'', region:'', car:'', assigned:'', notes:'',
-  fsurl: DEFAULT_FS, token:'', interval:30, mindist:10
+  token:'', interval:30, mindist:10
 };
 
 // ── MAP ───────────────────────────────────────────────────
@@ -461,7 +456,6 @@ function onErr(e) {
 // ── SUBMIT ────────────────────────────────────────────────
 async function submitLoc() {
   if (!lastPos) { toast('No GPS fix yet', 'err'); return; }
-  if (!cfg.fsurl) { toast('No Feature Service URL set', 'err'); openDrawer(); return; }
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = '…';
@@ -483,7 +477,7 @@ async function submitLoc() {
     heading:     hdg != null ? Math.round(hdg) : null
   };
 
-  const ok = await postFeature(lat, lng, attr);
+  const ok = await postFeature(lat, lng, attr, FS_URL);
   btn.disabled = false; btn.textContent = 'Submit';
 
   if (ok) {
@@ -496,7 +490,7 @@ async function submitLoc() {
   }
 }
 
-async function postFeature(lat, lng, attr) {
+async function postFeature(lat, lng, attr, fsUrl) {
   try {
     const feat = {
       geometry: { x: lng, y: lat, spatialReference: { wkid: 4326 } },
@@ -507,8 +501,9 @@ async function postFeature(lat, lng, attr) {
     body.append('rollbackOnFailure', 'true');
     body.append('f', 'json');
     if (cfg.token) body.append('token', cfg.token);
+    else body.append('token', API_KEY);
 
-    const url = cfg.fsurl.replace(/\/$/, '') + '/applyEdits';
+    const url = fsUrl.replace(/\/$/, '') + '/applyEdits';
     console.log('[FS] POST →', url);
     console.log('[FS] adds payload:', JSON.parse(body.get('adds')));
 
@@ -603,8 +598,6 @@ function loadCfg() {
   document.getElementById('s-car').value      = cfg.car;
   document.getElementById('s-assigned').value = cfg.assigned;
   document.getElementById('s-notes').value    = cfg.notes;
-  document.getElementById('s-fsurl').value    = cfg.fsurl;
-  document.getElementById('s-token').value    = cfg.token;
   document.getElementById('s-interval').value = cfg.interval;
   document.getElementById('s-mindist').value  = cfg.mindist;
 }
@@ -616,8 +609,6 @@ function saveSettings() {
   cfg.car      = document.getElementById('s-car').value.trim();
   cfg.assigned = document.getElementById('s-assigned').value.trim();
   cfg.notes    = document.getElementById('s-notes').value.trim();
-  cfg.fsurl    = document.getElementById('s-fsurl').value.trim().replace(/\/$/, '');
-  cfg.token    = document.getElementById('s-token').value.trim();
   cfg.interval = parseInt(document.getElementById('s-interval').value) || 30;
   cfg.mindist  = parseInt(document.getElementById('s-mindist').value)  || 10;
   try { localStorage.setItem('ft_cfg', JSON.stringify(cfg)); } catch(e) {}
