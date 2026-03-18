@@ -130,6 +130,18 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
     <div class="fg"><label>Auto-submit interval (sec)</label><input id="s-interval" type="number" value="30" min="5" max="300" inputmode="numeric"/></div>
     <div class="fg"><label>Min distance filter (m)</label><input id="s-mindist" type="number" value="10" min="0" max="500" inputmode="numeric"/></div>
     <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+
+    <div class="sec">App</div>
+    <div id="install-wrap" style="display:none">
+      <p style="font-size:13px;color:#888;margin-bottom:8px;line-height:1.5">Install this app to your home screen for better background GPS and to prevent the screen from sleeping while driving.</p>
+      <button class="save-btn" id="install-btn" onclick="installApp()" style="background:#0f1e33;border-color:#1976d2;color:#90caf9">Add to Home Screen</button>
+    </div>
+    <div id="install-ios" style="display:none">
+      <p style="font-size:13px;color:#888;line-height:1.5">To install on iPhone: tap the <b style="color:#90caf9">Share</b> button in Safari, then tap <b style="color:#90caf9">Add to Home Screen</b>.</p>
+    </div>
+    <div id="install-done" style="display:none">
+      <p style="font-size:13px;color:#22c55e;line-height:1.5">✓ Running as installed app</p>
+    </div>
   </div>
 </div>
 
@@ -158,6 +170,7 @@ window.addEventListener('load', () => {
   // when user manually pans/zooms, stop auto-centering
   map.on('dragstart zoomstart', () => { autoCenter = false; });
   loadCfg();
+  checkInstallState();
   startGPS();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 });
@@ -381,7 +394,43 @@ function saveSettings() {
   toast('Settings saved');
 }
 
-// ── WAKE LOCK ─────────────────────────────────────────────
+// ── INSTALL PROMPT ────────────────────────────────────────
+let deferredInstall = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-wrap').style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  document.getElementById('install-wrap').style.display = 'none';
+  document.getElementById('install-ios').style.display = 'none';
+  document.getElementById('install-done').style.display = 'block';
+});
+
+function installApp() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.then(() => { deferredInstall = null; });
+}
+
+function checkInstallState() {
+  // already installed as standalone
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    document.getElementById('install-done').style.display = 'block';
+    return;
+  }
+  // iOS Safari — no beforeinstallprompt, show manual instructions
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if (isIOS && isSafari) {
+    document.getElementById('install-ios').style.display = 'block';
+  }
+}
+
+
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
