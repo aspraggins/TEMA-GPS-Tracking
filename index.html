@@ -86,22 +86,21 @@
     border-bottom: 1px solid #1e3a5f;
     padding: 6px 8px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
     gap: 6px;
     flex-shrink: 0;
   }
 
   .tb-btn {
     flex-shrink: 0;
-    padding: 0 8px;
-    height: 42px;
+    padding: 0 4px;
+    height: 44px;
     border-radius: 7px;
     border: 1px solid #1e3a5f;
     background: #0f1e33;
     color: #90caf9;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     touch-action: manipulation;
@@ -115,16 +114,7 @@
   .tb-btn.green  { background: #14532d; border-color: #16a34a; color: #86efac; }
   .tb-btn.red    { background: #450a0a; border-color: #dc2626; color: #fca5a5; }
 
-  #status-msg {
-    font-size: 11px;
-    color: #555;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 0 4px;
-  }
+  #status-msg { display: none; }
 
   /* ── MAP ────────────────────────────────────── */
   #map {
@@ -328,10 +318,9 @@
   <!-- TOOLBAR -->
   <div id="toolbar">
     <button class="tb-btn green" id="submit-btn" onclick="submitLoc()">Submit</button>
-    <button class="tb-btn" id="track-btn" onclick="toggleTrack()">Live Track</button>
+    <button class="tb-btn" id="track-btn" onclick="toggleTrack()">Track</button>
     <button class="tb-btn" id="center-btn" onclick="centerMap()">Center</button>
     <button class="tb-btn red" onclick="clearTrack()">Clear</button>
-    <span id="status-msg">Ready</span>
     <button class="tb-btn" onclick="openDrawer()">⚙</button>
   </div>
 
