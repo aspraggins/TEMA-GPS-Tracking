@@ -145,6 +145,8 @@ const API_KEY = 'AAPTazhRcsXx2zds21YpZp1-dFg..EKg3yrraSGbd2qlXMFPcE7ilLY-lQXdcsV
 let map, locMarker, accCircle, trackLine;
 let isTracking = false, autoTimer = null, stalenessTimer = null;
 let lastPos = null, trackCoords = [];
+let autoCenter = true;
+let wakeLock = null;
 let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',interval:30,mindist:10};
 
 // ── INIT ──────────────────────────────────────────────────
@@ -153,6 +155,8 @@ window.addEventListener('load', () => {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap', maxZoom:19, detectRetina:true
   }).addTo(map);
+  // when user manually pans/zooms, stop auto-centering
+  map.on('dragstart zoomstart', () => { autoCenter = false; });
   loadCfg();
   startGPS();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
@@ -165,10 +169,6 @@ let watchId = null;
 function startGPS() {
   if (!navigator.geolocation) { toast('Geolocation not available', 'err'); return; }
   beginWatch();
-  // on focus/visibility restore, restart the watch to kick Safari loose
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') restartWatch();
-  });
   window.addEventListener('focus', restartWatch);
 }
 
@@ -217,9 +217,11 @@ function onPos(pos) {
     locMarker = L.marker([lat,lng], {icon, zIndexOffset:1000}).addTo(map);
     accCircle = L.circle([lat,lng], {radius:acc, color:'#3b82f6', fillOpacity:.07, weight:1}).addTo(map);
     map.setView([lat,lng], 14);
+    requestWakeLock();
   } else {
     locMarker.setLatLng([lat,lng]);
     accCircle.setLatLng([lat,lng]); accCircle.setRadius(acc);
+    if (autoCenter) map.panTo([lat,lng], {animate:true, duration:0.5});
   }
 
   if (isTracking) addTrackPt(lat, lng);
@@ -379,8 +381,30 @@ function saveSettings() {
   toast('Settings saved');
 }
 
+// ── WAKE LOCK ─────────────────────────────────────────────
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch(e) { console.warn('Wake lock failed:', e); }
+}
+
+// re-acquire wake lock when tab becomes visible again
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    restartWatch();
+    if (!wakeLock) await requestWakeLock();
+  }
+});
+
 // ── UTILS ─────────────────────────────────────────────────
-function centerMap() { if (lastPos) map.setView([lastPos.coords.latitude, lastPos.coords.longitude], 16); }
+function centerMap() {
+  if (lastPos) {
+    autoCenter = true;
+    map.setView([lastPos.coords.latitude, lastPos.coords.longitude], 16);
+  }
+}
 
 function toast(msg, type) {
   const t = document.getElementById('toast');
