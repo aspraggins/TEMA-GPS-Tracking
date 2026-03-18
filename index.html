@@ -97,6 +97,7 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
       <div class="bmeta">Spd: <span id="m-spd">—</span></div>
       <div class="bmeta">Hdg: <span id="m-hdg">—</span></div>
       <div class="bmeta"><span id="m-time">—</span></div>
+      <div class="bmeta">GPS: <span id="m-gpsmode" style="color:#f59e0b">balanced</span></div>
     </div>
   </div>
 
@@ -159,6 +160,7 @@ let isTracking = false, autoTimer = null, stalenessTimer = null;
 let lastPos = null, trackCoords = [];
 let autoCenter = true;
 let wakeLock = null;
+let gpsMode = 'balanced'; // 'balanced' | 'high'
 let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',interval:30,mindist:10};
 
 // ── INIT ──────────────────────────────────────────────────
@@ -186,9 +188,11 @@ function startGPS() {
 }
 
 function beginWatch() {
-  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
-    enableHighAccuracy: true, maximumAge: 0, timeout: 15000
-  });
+  // high accuracy only when tracking, balanced otherwise
+  const opts = gpsMode === 'high'
+    ? {enableHighAccuracy: true,  maximumAge: 0,     timeout: 15000}
+    : {enableHighAccuracy: false, maximumAge: 15000, timeout: 20000};
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, opts);
 }
 
 function restartWatch() {
@@ -217,6 +221,9 @@ function onPos(pos) {
   document.getElementById('m-spd').textContent  = spd != null ? `${(spd*2.237).toFixed(1)}mph` : '—';
   document.getElementById('m-hdg').textContent  = hdg != null ? `${Math.round(hdg)}°` : '—';
   document.getElementById('m-time').textContent = new Date(pos.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const modeEl = document.getElementById('m-gpsmode');
+  modeEl.textContent = gpsMode;
+  modeEl.style.color = gpsMode === 'high' ? '#22c55e' : '#f59e0b';
   clearTimeout(stalenessTimer);
   stalenessTimer = setTimeout(() => {
     document.getElementById('gps-dot').className = '';
@@ -320,10 +327,14 @@ function toggleTrack() {
   const btn = document.getElementById('track-btn');
   const info = document.getElementById('track-info');
   if (isTracking) {
+    gpsMode = 'high';
+    restartWatch();
     btn.textContent = 'Stop'; btn.classList.add('active');
     info.classList.add('vis');
     autoTimer = setInterval(() => { if (lastPos) submitLoc(); }, cfg.interval * 1000);
   } else {
+    gpsMode = 'balanced';
+    restartWatch();
     btn.textContent = 'Track'; btn.classList.remove('active');
     info.classList.remove('vis');
     clearInterval(autoTimer); autoTimer = null;
