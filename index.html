@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0d1117"/>
 <title>Field Tracker</title>
-<link rel="manifest" href="./manifest.json"/>
+<link rel="manifest" href="/TEMA-GPS-Tracking/manifest.json"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -174,7 +174,7 @@ window.addEventListener('load', () => {
   loadCfg();
   checkInstallState();
   startGPS();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/TEMA-GPS-Tracking/sw.js', {scope: '/TEMA-GPS-Tracking/'}).catch(e => console.warn('SW:', e));
 });
 window.addEventListener('resize', () => map && map.invalidateSize());
 
