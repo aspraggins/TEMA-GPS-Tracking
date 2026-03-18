@@ -8,304 +8,88 @@
 <meta name="theme-color" content="#0d1117"/>
 <title>Field Tracker</title>
 <link rel="manifest" href="manifest.json"/>
-<link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#0d1117;color:#e0e0e0}
 
-  :root{
-    --banner-h: 52px;
-    --toolbar-h: 50px;
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bot: env(safe-area-inset-bottom, 0px);
-  }
+#app{
+  display:flex;flex-direction:column;
+  height:100vh;height:100dvh;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
 
-  html, body {
-    height: 100%;
-    overflow: hidden;
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0d1117;
-    color: #e0e0e0;
-  }
+/* BANNER */
+#banner{background:#0f0f1e;border-bottom:1px solid #1e3a5f;padding:8px 12px;flex-shrink:0}
+#banner-row1{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+#gps-dot{width:11px;height:11px;border-radius:50%;background:#444;flex-shrink:0;transition:background .3s}
+#gps-dot.good{background:#22c55e;box-shadow:0 0 6px #22c55e99}
+#gps-dot.ok{background:#f59e0b;box-shadow:0 0 6px #f59e0b99}
+#gps-dot.bad{background:#ef4444}
+#banner-coords{font-family:monospace;font-size:14px;color:#a3e635;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#settings-btn{flex-shrink:0;background:#0f1e33;border:1px solid #1e3a5f;color:#90caf9;border-radius:7px;width:40px;height:40px;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
+#settings-btn:active{opacity:.7}
+#banner-row2{display:flex;gap:12px;flex-wrap:wrap}
+.bmeta{font-size:11px;color:#555}
+.bmeta span{color:#999}
+.acc-good{color:#22c55e!important}
+.acc-ok{color:#f59e0b!important}
+.acc-bad{color:#ef4444!important}
 
-  #app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bot);
-  }
+/* TOOLBAR */
+#toolbar{background:#0a1628;border-bottom:1px solid #1e3a5f;padding:6px 8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;flex-shrink:0}
+.tb{height:44px;border-radius:8px;border:1px solid #1e3a5f;background:#0f1e33;color:#90caf9;font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;width:100%}
+.tb:active{opacity:.7;transform:scale(.97)}
+.tb.green{background:#14532d;border-color:#16a34a;color:#86efac}
+.tb.red{background:#450a0a;border-color:#dc2626;color:#fca5a5}
+.tb.active{background:#1565c0;border-color:#2196f3;color:#fff}
 
-  /* ── BANNER ─────────────────────────────────── */
-  #banner {
-    background: #0f0f1e;
-    border-bottom: 1px solid #1e3a5f;
-    padding: 6px 12px;
-    flex-shrink: 0;
-  }
-  #banner-row1 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
-  }
-  #gps-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #555;
-    flex-shrink: 0;
-    transition: background .3s;
-  }
-  #gps-dot.good { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-  #gps-dot.ok   { background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; }
-  #gps-dot.bad  { background: #ef4444; }
-  #banner-coords {
-    font-size: 13px;
-    font-family: monospace;
-    color: #a3e635;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  #banner-row2 {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .bmeta { font-size: 11px; color: #555; white-space: nowrap; }
-  .bmeta span { color: #999; }
-  .acc-good { color: #22c55e !important; }
-  .acc-ok   { color: #f59e0b !important; }
-  .acc-bad  { color: #ef4444 !important; }
+/* MAP */
+#map{flex:1;min-height:0}
 
-  /* ── TOOLBAR ────────────────────────────────── */
-  #toolbar {
-    background: #0a1628;
-    border-bottom: 1px solid #1e3a5f;
-    padding: 6px 8px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 6px;
-    flex-shrink: 0;
-  }
+/* TRACK INFO */
+#track-info{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:10px;z-index:500;background:#0f1b2dee;border:1px solid #1e3a5f;border-radius:8px;padding:6px 10px;font-size:12px;color:#90caf9;display:none;pointer-events:none}
+#track-info.vis{display:block}
 
-  .tb-btn {
-    flex-shrink: 0;
-    padding: 0 4px;
-    height: 44px;
-    border-radius: 7px;
-    border: 1px solid #1e3a5f;
-    background: #0f1e33;
-    color: #90caf9;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    touch-action: manipulation;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-  }
-  .tb-btn:active { opacity: .7; transform: scale(.97); }
-  .tb-btn.active { background: #1565c0; border-color: #2196f3; color: #fff; }
-  .tb-btn.green  { background: #14532d; border-color: #16a34a; color: #86efac; }
-  .tb-btn.red    { background: #450a0a; border-color: #dc2626; color: #fca5a5; }
+/* DRAWER */
+#overlay{display:none;position:fixed;inset:0;background:#00000088;z-index:900}
+#overlay.open{display:block}
+#drawer{position:fixed;top:0;right:-100%;width:min(340px,100vw);height:100%;height:100dvh;background:#0a121f;border-left:1px solid #1e3a5f;z-index:1000;display:flex;flex-direction:column;transition:right .25s ease;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#drawer.open{right:0}
+#drawer-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1e3a5f;flex-shrink:0}
+#drawer-head h2{font-size:16px;font-weight:600;color:#90caf9}
+#close-btn{background:none;border:none;color:#666;font-size:24px;cursor:pointer;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+#close-btn:active{color:#fff}
+#drawer-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch}
+.sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1976d2;margin-top:6px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg textarea{background:#060d18;border:1px solid #1e3a5f;border-radius:6px;color:#e0e0e0;padding:10px;font-size:16px;width:100%;-webkit-appearance:none;appearance:none}
+.fg input:focus,.fg textarea:focus{outline:none;border-color:#1976d2}
+.fg textarea{resize:vertical;min-height:70px;font-family:inherit}
+.save-btn{width:100%;padding:13px;border-radius:8px;background:#14532d;border:1px solid #16a34a;color:#86efac;font-size:16px;font-weight:600;cursor:pointer;margin-top:6px;touch-action:manipulation}
+.save-btn:active{opacity:.8}
 
-  #status-msg { display: none; }
+/* TOAST */
+#toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#14532d;color:#86efac;border:1px solid #16a34a;padding:10px 20px;border-radius:10px;font-size:14px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center}
+#toast.err{background:#450a0a;color:#fca5a5;border-color:#dc2626}
+#toast.show{opacity:1}
 
-  /* ── MAP ────────────────────────────────────── */
-  #map {
-    flex: 1;
-    min-height: 0;
-    z-index: 1;
-  }
-
-  /* ── TRACK INFO ──────────────────────────────── */
-  #track-info {
-    position: absolute;
-    bottom: calc(14px + var(--safe-bot));
-    left: 10px;
-    z-index: 500;
-    background: #0f1b2dee;
-    border: 1px solid #1e3a5f;
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 12px;
-    color: #90caf9;
-    display: none;
-    pointer-events: none;
-  }
-  #track-info.vis { display: block; }
-
-  /* ── DRAWER ─────────────────────────────────── */
-  #overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: #00000088;
-    z-index: 900;
-  }
-  #overlay.open { display: block; }
-
-  #drawer {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: min(340px, 100vw);
-    height: 100%;
-    height: 100dvh;
-    background: #0a121f;
-    border-left: 1px solid #1e3a5f;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    transition: right .25s ease;
-    padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bot);
-  }
-  #drawer.open { right: 0; }
-
-  #drawer-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 14px;
-    border-bottom: 1px solid #1e3a5f;
-    flex-shrink: 0;
-  }
-  #drawer-head h2 { font-size: 15px; font-weight: 600; color: #90caf9; }
-
-  #close-btn {
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 22px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-    touch-action: manipulation;
-    min-width: 36px;
-    min-height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #close-btn:active { color: #fff; }
-
-  #drawer-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .sec-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #1976d2;
-    margin-top: 4px;
-  }
-  .fg { display: flex; flex-direction: column; gap: 4px; }
-  .fg label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: .04em; }
-  .fg input, .fg textarea {
-    background: #060d18;
-    border: 1px solid #1e3a5f;
-    border-radius: 6px;
-    color: #e0e0e0;
-    padding: 10px 10px;
-    font-size: 16px; /* prevents iOS zoom */
-    width: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .fg input:focus, .fg textarea:focus {
-    outline: none;
-    border-color: #1976d2;
-  }
-  .fg textarea {
-    resize: vertical;
-    min-height: 65px;
-    font-family: inherit;
-  }
-
-  .save-btn {
-    width: 100%;
-    padding: 12px;
-    border-radius: 8px;
-    background: #14532d;
-    border: 1px solid #16a34a;
-    color: #86efac;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 4px;
-    min-height: 48px;
-    touch-action: manipulation;
-  }
-  .save-btn:active { opacity: .8; }
-
-  /* ── TOAST ──────────────────────────────────── */
-  #toast {
-    position: fixed;
-    bottom: calc(20px + var(--safe-bot));
-    left: 50%;
-    transform: translateX(-50%);
-    background: #14532d;
-    color: #86efac;
-    border: 1px solid #16a34a;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-size: 13px;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity .3s;
-    pointer-events: none;
-    white-space: nowrap;
-    max-width: 90vw;
-    text-align: center;
-  }
-  #toast.err  { background: #450a0a; color: #fca5a5; border-color: #dc2626; }
-  #toast.show { opacity: 1; }
-
-  /* ── LEAFLET ────────────────────────────────── */
-  .my-dot {
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: #3b82f6;
-    border: 2.5px solid #fff;
-    box-shadow: 0 0 0 3px #3b82f644;
-  }
-  .pulse-ring {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: #3b82f618;
-    border: 1.5px solid #3b82f655;
-    position: absolute;
-    top: -13px; left: -13px;
-    animation: pulse 2s infinite ease-out;
-  }
-  @keyframes pulse {
-    0%   { transform: scale(.5); opacity: 1; }
-    100% { transform: scale(2.2); opacity: 0; }
-  }
+/* LEAFLET */
+.my-dot{width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2.5px solid #fff;box-shadow:0 0 0 3px #3b82f644}
+.pulse-ring{width:40px;height:40px;border-radius:50%;background:#3b82f618;border:1.5px solid #3b82f655;position:absolute;top:-13px;left:-13px;animation:pulse 2s infinite ease-out}
+@keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(2.2);opacity:0}}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- BANNER -->
   <div id="banner">
     <div id="banner-row1">
       <div id="gps-dot"></div>
       <div id="banner-coords">Acquiring GPS…</div>
-      <button class="tb-btn" onclick="openDrawer()" style="flex-shrink:0;width:42px;height:36px;font-size:18px;margin-left:6px;border-radius:7px;">⚙</button>
+      <button id="settings-btn" onclick="openDrawer()">⚙</button>
     </div>
     <div id="banner-row2">
       <div class="bmeta">Acc: <span id="m-acc">—</span></div>
@@ -316,128 +100,103 @@
     </div>
   </div>
 
-  <!-- TOOLBAR -->
   <div id="toolbar">
-    <button class="tb-btn green" id="submit-btn" onclick="submitLoc()">Submit</button>
-    <button class="tb-btn" id="track-btn" onclick="toggleTrack()">Track</button>
-    <button class="tb-btn" id="center-btn" onclick="centerMap()">Center</button>
-    <button class="tb-btn red" onclick="clearTrack()">Clear</button>
+    <button class="tb green" id="submit-btn" onclick="submitLoc()">Submit</button>
+    <button class="tb" id="track-btn" onclick="toggleTrack()">Track</button>
+    <button class="tb" onclick="centerMap()">Center</button>
+    <button class="tb red" onclick="clearTrack()">Clear</button>
   </div>
 
-  <!-- MAP -->
   <div id="map"></div>
-  <div id="track-info">
-    <span id="ti-pts">0 pts</span> &nbsp;·&nbsp; <span id="ti-dist">0.0 mi</span>
-  </div>
+  <div id="track-info"><span id="ti-pts">0 pts</span> · <span id="ti-dist">0.0 mi</span></div>
 
 </div>
 
-<!-- SETTINGS DRAWER -->
 <div id="overlay" onclick="closeDrawer()"></div>
 <div id="drawer">
   <div id="drawer-head">
     <h2>Responder Settings</h2>
-    <button id="close-btn" onclick="closeDrawer()">&#x2715;</button>
+    <button id="close-btn" onclick="closeDrawer()">✕</button>
   </div>
   <div id="drawer-body">
-    <div class="sec-label">Identity</div>
-    <div class="fg"><label>Name</label>
-      <input id="s-name" type="text" placeholder="Full name" autocomplete="name" autocorrect="off"/></div>
-    <div class="fg"><label>Agency</label>
-      <input id="s-agency" type="text" placeholder="e.g. TEMA" autocorrect="off"/></div>
-    <div class="fg"><label>Region</label>
-      <input id="s-region" type="text" placeholder="e.g. West TN" autocorrect="off"/></div>
-    <div class="fg"><label>Car Number</label>
-      <input id="s-car" type="text" placeholder="e.g. ESC-7" autocorrect="off"/></div>
-    <div class="fg"><label>Assigned</label>
-      <input id="s-assigned" type="text" placeholder="Current assignment" autocorrect="off"/></div>
-    <div class="fg"><label>Notes</label>
-      <textarea id="s-notes" placeholder="Mission notes…"></textarea></div>
-
-    <div class="sec-label">Tracking</div>
-    <div class="fg"><label>Auto-submit interval (sec)</label>
-      <input id="s-interval" type="number" value="30" min="5" max="300" inputmode="numeric"/></div>
-    <div class="fg"><label>Min distance filter (m)</label>
-      <input id="s-mindist" type="number" value="10" min="0" max="500" inputmode="numeric"/></div>
-
+    <div class="sec">Identity</div>
+    <div class="fg"><label>Name</label><input id="s-name" type="text" placeholder="Full name" autocomplete="name" autocorrect="off"/></div>
+    <div class="fg"><label>Agency</label><input id="s-agency" type="text" placeholder="e.g. TEMA" autocorrect="off"/></div>
+    <div class="fg"><label>Region</label><input id="s-region" type="text" placeholder="e.g. West TN" autocorrect="off"/></div>
+    <div class="fg"><label>Car Number</label><input id="s-car" type="text" placeholder="e.g. ESC-7" autocorrect="off"/></div>
+    <div class="fg"><label>Assigned</label><input id="s-assigned" type="text" placeholder="Current assignment" autocorrect="off"/></div>
+    <div class="fg"><label>Notes</label><textarea id="s-notes" placeholder="Mission notes…"></textarea></div>
+    <div class="sec">Tracking</div>
+    <div class="fg"><label>Auto-submit interval (sec)</label><input id="s-interval" type="number" value="30" min="5" max="300" inputmode="numeric"/></div>
+    <div class="fg"><label>Min distance filter (m)</label><input id="s-mindist" type="number" value="10" min="0" max="500" inputmode="numeric"/></div>
     <button class="save-btn" onclick="saveSettings()">Save Settings</button>
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
-
-<!-- DEBUG LOG -->
-<div id="dbg" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:#000d;color:#0f0;font-size:11px;font-family:monospace;padding:8px;z-index:3000;border-top:1px solid #0f0;"></div>
-<button id="dbg-toggle" onclick="toggleDbg()" style="position:fixed;bottom:4px;right:4px;z-index:3001;background:#000;color:#0f0;border:1px solid #0f0;border-radius:4px;font-size:10px;padding:3px 7px;opacity:.7;">debug</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// ── CONFIG (not exposed in UI) ────────────────────────────
 const FS_URL = 'https://services1.arcgis.com/kILp9lqGUeOhnDbI/arcgis/rest/services/service_d68fab51155d4f54b9fc6c270cb869e4_form/FeatureServer/0';
 const API_KEY = 'AAPTazhRcsXx2zds21YpZp1-dFg..EKg3yrraSGbd2qlXMFPcE7ilLY-lQXdcsVGnREQKbpnHsT7nl2-Du58axyZGZvotCPNJuDL9QQBqsQbOoDlXiMII8RVBc_Jqh7DBv6gQo0RYXMb1diY5vnTQVEE79BfWKdObuGLTf0rCGa64lpZoB8b7CObi1w3UGCTFmFS4kOFsUM80-zYj8uqMm7S0Uuw2cOZu6XKoDjp_Kn46AeWYQTROcup08-iTJNm4djJSzSlvXQwn6t1iQCrcD9G4Zt4OJBd59H0mRJnTQ_H6NA..AT1_OYyZ5OcC';
 
+// ── STATE ─────────────────────────────────────────────────
 let map, locMarker, accCircle, trackLine;
 let isTracking = false, autoTimer = null;
-let lastPos = null, trackCoords = [], trackPts = [];
-let cfg = {
-  name:'', agency:'', region:'', car:'', assigned:'', notes:'',
-  token:'', interval:30, mindist:10
-};
+let lastPos = null, trackCoords = [];
+let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',interval:30,mindist:10};
 
-// ── MAP ───────────────────────────────────────────────────
-function initMap() {
-  map = L.map('map', { zoomControl: true, tap: true }).setView([35.8, -86.4], 7);
+// ── INIT ──────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  map = L.map('map', {zoomControl:true}).setView([35.8,-86.4], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19, detectRetina: true
+    attribution:'© OpenStreetMap', maxZoom:19, detectRetina:true
   }).addTo(map);
   loadCfg();
-  startWatch();
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW:', e));
-  }
-}
+  startGPS();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+});
+window.addEventListener('resize', () => map && map.invalidateSize());
 
 // ── GPS ───────────────────────────────────────────────────
-function startWatch() {
-  if (!navigator.geolocation) { toast('Geolocation not supported', 'err'); return; }
-  navigator.geolocation.watchPosition(onPos, onErr, {
-    enableHighAccuracy: true, maximumAge: 4000, timeout: 15000
-  });
+function startGPS() {
+  if (!navigator.geolocation) { toast('Geolocation not available', 'err'); return; }
+  navigator.geolocation.watchPosition(onPos, onErr, {enableHighAccuracy:true, maximumAge:4000, timeout:15000});
 }
 
 function onPos(pos) {
   lastPos = pos;
-  const { latitude:lat, longitude:lng, accuracy:acc, altitude:alt, speed:spd, heading:hdg } = pos.coords;
+  const {latitude:lat, longitude:lng, accuracy:acc, altitude:alt, speed:spd, heading:hdg} = pos.coords;
 
+  // banner dot
   const dot = document.getElementById('gps-dot');
   dot.className = acc < 10 ? 'good' : acc < 30 ? 'ok' : 'bad';
+
+  // coords
   document.getElementById('banner-coords').textContent = `${lat.toFixed(6)},  ${lng.toFixed(6)}`;
 
-  const accEl = document.getElementById('m-acc');
-  accEl.textContent = `±${Math.round(acc)}m`;
-  accEl.className = acc < 10 ? 'acc-good' : acc < 30 ? 'acc-ok' : 'acc-bad';
-  document.getElementById('m-alt').textContent = alt != null ? `${Math.round(alt)}m` : '—';
-  document.getElementById('m-spd').textContent = spd != null ? `${(spd * 2.237).toFixed(1)}mph` : '—';
-  document.getElementById('m-hdg').textContent = hdg != null ? `${Math.round(hdg)}°` : '—';
-  document.getElementById('m-time').textContent = new Date(pos.timestamp)
-    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  // meta
+  const aEl = document.getElementById('m-acc');
+  aEl.textContent = `±${Math.round(acc)}m`;
+  aEl.className = acc < 10 ? 'acc-good' : acc < 30 ? 'acc-ok' : 'acc-bad';
+  document.getElementById('m-alt').textContent  = alt != null ? `${Math.round(alt)}m` : '—';
+  document.getElementById('m-spd').textContent  = spd != null ? `${(spd*2.237).toFixed(1)}mph` : '—';
+  document.getElementById('m-hdg').textContent  = hdg != null ? `${Math.round(hdg)}°` : '—';
+  document.getElementById('m-time').textContent = new Date(pos.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
+  // marker
   if (!locMarker) {
-    const icon = L.divIcon({
-      className: '',
-      html: '<div style="position:relative"><div class="pulse-ring"></div><div class="my-dot"></div></div>',
-      iconSize: [14, 14], iconAnchor: [7, 7]
-    });
-    locMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map);
-    accCircle = L.circle([lat, lng], { radius: acc, color: '#3b82f6', fillOpacity: .07, weight: 1 }).addTo(map);
-    map.setView([lat, lng], 14);
+    const icon = L.divIcon({className:'', html:'<div style="position:relative"><div class="pulse-ring"></div><div class="my-dot"></div></div>', iconSize:[14,14], iconAnchor:[7,7]});
+    locMarker = L.marker([lat,lng], {icon, zIndexOffset:1000}).addTo(map);
+    accCircle = L.circle([lat,lng], {radius:acc, color:'#3b82f6', fillOpacity:.07, weight:1}).addTo(map);
+    map.setView([lat,lng], 14);
   } else {
-    locMarker.setLatLng([lat, lng]);
-    accCircle.setLatLng([lat, lng]);
-    accCircle.setRadius(acc);
+    locMarker.setLatLng([lat,lng]);
+    accCircle.setLatLng([lat,lng]); accCircle.setRadius(acc);
   }
 
-  if (isTracking) addTrackPt(lat, lng, pos.timestamp);
+  if (isTracking) addTrackPt(lat, lng);
 }
 
 function onErr(e) {
@@ -446,16 +205,18 @@ function onErr(e) {
 }
 
 // ── SUBMIT ────────────────────────────────────────────────
-async function submitLoc() {
+function submitLoc() {
   if (!lastPos) { toast('No GPS fix yet', 'err'); return; }
 
   const btn = document.getElementById('submit-btn');
-  btn.disabled = true; btn.textContent = '…';
-  setStatus('Submitting…');
+  btn.disabled = true;
+  btn.textContent = '…';
 
-  try {
-    const { latitude:lat, longitude:lng, speed:spd, heading:hdg } = lastPos.coords;
-    const attr = {
+  const {latitude:lat, longitude:lng, speed:spd, heading:hdg} = lastPos.coords;
+
+  const feature = JSON.stringify([{
+    geometry: {x: lng, y: lat, spatialReference: {wkid: 4326}},
+    attributes: {
       name:          cfg.name     || 'Unknown',
       car_number:    cfg.car      || null,
       agency:        cfg.agency   || null,
@@ -466,110 +227,87 @@ async function submitLoc() {
       latitude:      lat,
       longitude:     lng,
       timestamp_utc: new Date(lastPos.timestamp).toISOString(),
-      speed_mph:     spd != null ? parseFloat((spd * 2.237).toFixed(1)) : null,
+      speed_mph:     spd != null ? parseFloat((spd*2.237).toFixed(1)) : null,
       heading:       hdg != null ? Math.round(hdg) : null
-    };
-
-    const result = await postFeature(lat, lng, attr, FS_URL);
-
-    if (result.ok) {
-      toast(`Submitted · ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-      setStatus('Last submit: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      dropPin(lat, lng, attr);
-    } else {
-      toast(result.msg || 'Submit failed', 'err');
-      setStatus('Submit failed');
     }
-  } catch (e) {
-    console.error('[Submit] Uncaught:', e);
-    toast('Error: ' + e.message, 'err');
-    setStatus('Submit error');
-  } finally {
+  }]);
+
+  const body = 'f=json'
+    + '&token=' + encodeURIComponent(API_KEY)
+    + '&rollbackOnFailure=true'
+    + '&adds=' + encodeURIComponent(feature);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', FS_URL + '/applyEdits', true);
+  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xhr.timeout = 15000;
+
+  xhr.onload = function() {
     btn.disabled = false;
     btn.textContent = 'Submit';
-  }
+    try {
+      const j = JSON.parse(xhr.responseText);
+      if (j.error) {
+        toast('Error: ' + j.error.message, 'err');
+      } else if (j.addResults && j.addResults[0] && j.addResults[0].success) {
+        toast('Submitted · ' + lat.toFixed(5) + ', ' + lng.toFixed(5));
+        dropPin(lat, lng);
+      } else {
+        const desc = j.addResults && j.addResults[0] && j.addResults[0].error && j.addResults[0].error.description;
+        toast(desc || 'Submit failed', 'err');
+      }
+    } catch(e) {
+      toast('Bad response: ' + xhr.responseText.slice(0,60), 'err');
+    }
+  };
+
+  xhr.onerror   = function() { btn.disabled=false; btn.textContent='Submit'; toast('Network error', 'err'); };
+  xhr.ontimeout = function() { btn.disabled=false; btn.textContent='Submit'; toast('Request timed out', 'err'); };
+
+  xhr.send(body);
 }
 
-async function postFeature(lat, lng, attr, fsUrl) {
-  try {
-    const feat = {
-      geometry: { x: lng, y: lat, spatialReference: { wkid: 4326 } },
-      attributes: attr
-    };
-    const body = new URLSearchParams();
-    body.append('adds', JSON.stringify([feat]));
-    body.append('rollbackOnFailure', 'true');
-    body.append('f', 'json');
-    if (cfg.token) body.append('token', cfg.token);
-    else body.append('token', API_KEY);
-
-    const url = fsUrl.replace(/\/$/, '') + '/applyEdits';
-    console.log('[FS] POST →', url);
-    console.log('[FS] adds payload:', JSON.parse(body.get('adds')));
-
-    const r = await fetch(url, { method: 'POST', body });
-    const j = await r.json();
-    console.log('[FS] Response:', j);
-
-    if (j.error) { console.error('[FS] Error:', j.error); return false; }
-    return j.addResults && j.addResults[0] && j.addResults[0].success === true;
-  } catch (e) {
-    console.error('[FS] Exception:', e);
-    return false;
-  }
+function dropPin(lat, lng) {
+  const icon = L.divIcon({className:'', html:'<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 6px #22c55e88"></div>', iconSize:[12,12], iconAnchor:[6,6]});
+  L.marker([lat,lng], {icon}).addTo(map)
+   .bindPopup(`<b>${cfg.name||'Unknown'}</b>${cfg.car?' · '+cfg.car:''}<br>${cfg.agency||''}<br>${lat.toFixed(5)}, ${lng.toFixed(5)}`);
 }
 
-function dropPin(lat, lng, attr) {
-  const icon = L.divIcon({
-    className: '',
-    html: '<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 6px #22c55e88"></div>',
-    iconSize: [12, 12], iconAnchor: [6, 6]
-  });
-  const t = new Date(attr.timestamp_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  L.marker([lat, lng], { icon }).addTo(map)
-    .bindPopup(`<b>${attr.name}</b>${attr.car_number ? ' · ' + attr.car_number : ''}<br>
-      ${attr.agency || ''}<br>${lat.toFixed(5)}, ${lng.toFixed(5)}<br>${t}
-      ${attr.notes ? '<br><i>' + attr.notes + '</i>' : ''}`);
-}
-
-// ── LIVE TRACKING ─────────────────────────────────────────
+// ── TRACKING ──────────────────────────────────────────────
 function toggleTrack() {
   isTracking = !isTracking;
   const btn = document.getElementById('track-btn');
+  const info = document.getElementById('track-info');
   if (isTracking) {
     btn.textContent = 'Stop'; btn.classList.add('active');
-    document.getElementById('track-info').classList.add('vis');
-    setStatus('Tracking ON');
+    info.classList.add('vis');
     autoTimer = setInterval(() => { if (lastPos) submitLoc(); }, cfg.interval * 1000);
   } else {
-    btn.textContent = 'Live Track'; btn.classList.remove('active');
+    btn.textContent = 'Track'; btn.classList.remove('active');
+    info.classList.remove('vis');
     clearInterval(autoTimer); autoTimer = null;
-    document.getElementById('track-info').classList.remove('vis');
-    setStatus('Tracking OFF');
   }
 }
 
-function addTrackPt(lat, lng, ts) {
+function addTrackPt(lat, lng) {
   if (trackCoords.length) {
-    const [plat, plng] = trackCoords[trackCoords.length - 1];
-    if (haversine(plat, plng, lat, lng) < cfg.mindist) return;
+    const [a,b] = trackCoords[trackCoords.length-1];
+    if (haversine(a,b,lat,lng) < cfg.mindist) return;
   }
-  trackCoords.push([lat, lng]);
-  trackPts.push({ lat, lng, ts });
+  trackCoords.push([lat,lng]);
   if (trackLine) map.removeLayer(trackLine);
   if (trackCoords.length > 1)
-    trackLine = L.polyline(trackCoords, { color: '#f59e0b', weight: 3, opacity: .85, dashArray: '6,5' }).addTo(map);
+    trackLine = L.polyline(trackCoords, {color:'#f59e0b', weight:3, opacity:.85, dashArray:'6,5'}).addTo(map);
   const mi = totalDist() / 1609.34;
   document.getElementById('ti-pts').textContent = trackCoords.length + ' pts';
   document.getElementById('ti-dist').textContent = mi.toFixed(1) + ' mi';
 }
 
 function clearTrack() {
-  trackCoords = []; trackPts = [];
+  trackCoords = [];
   if (trackLine) { map.removeLayer(trackLine); trackLine = null; }
   document.getElementById('ti-pts').textContent = '0 pts';
   document.getElementById('ti-dist').textContent = '0.0 mi';
-  setStatus('Track cleared');
 }
 
 function totalDist() {
@@ -579,15 +317,14 @@ function totalDist() {
   return d;
 }
 
-function haversine(a, b, c, d) {
-  const R = 6371000, r = Math.PI / 180;
-  const dL = (c - a) * r, dN = (d - b) * r;
-  const x = Math.sin(dL/2)**2 + Math.cos(a*r) * Math.cos(c*r) * Math.sin(dN/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+function haversine(a,b,c,d) {
+  const R=6371000, r=Math.PI/180;
+  const x = Math.sin((c-a)*r/2)**2 + Math.cos(a*r)*Math.cos(c*r)*Math.sin((d-b)*r/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
 // ── SETTINGS ─────────────────────────────────────────────
-function openDrawer()  { document.getElementById('drawer').classList.add('open');  document.getElementById('overlay').classList.add('open');  }
+function openDrawer()  { document.getElementById('drawer').classList.add('open');  document.getElementById('overlay').classList.add('open'); }
 function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
 
 function loadCfg() {
@@ -616,33 +353,16 @@ function saveSettings() {
   toast('Settings saved');
 }
 
-// ── DEBUG ─────────────────────────────────────────────────
-let dbgVisible = false;
-function toggleDbg() { dbgVisible=!dbgVisible; document.getElementById('dbg').style.display=dbgVisible?'block':'none'; }
-function dbg(...args) {
-  const msg = args.map(a => typeof a==='object' ? JSON.stringify(a,null,2) : String(a)).join(' ');
-  console.log(...args);
-  const el = document.getElementById('dbg');
-  const line = document.createElement('div');
-  line.style.borderBottom = '1px solid #0f02';
-  line.style.paddingBottom = '3px';
-  line.style.marginBottom = '3px';
-  line.textContent = new Date().toLocaleTimeString() + ' ' + msg;
-  el.appendChild(line);
-  el.scrollTop = el.scrollHeight;
-}
-
-
+// ── UTILS ─────────────────────────────────────────────────
 function centerMap() { if (lastPos) map.setView([lastPos.coords.latitude, lastPos.coords.longitude], 16); }
-function setStatus(m) { document.getElementById('status-msg').textContent = m; }
-function toast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = (type ? type + ' ' : '') + 'show';
-  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3500);
-}
 
-window.addEventListener('load', initMap);
-window.addEventListener('resize', () => map && map.invalidateSize());
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = (type ? type + ' ' : '') + 'show';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = '', 4000);
+}
 </script>
 </body>
 </html>
