@@ -367,6 +367,10 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- DEBUG LOG -->
+<div id="dbg" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:#000d;color:#0f0;font-size:11px;font-family:monospace;padding:8px;z-index:3000;border-top:1px solid #0f0;"></div>
+<button id="dbg-toggle" onclick="toggleDbg()" style="position:fixed;bottom:4px;right:4px;z-index:3001;background:#000;color:#0f0;border:1px solid #0f0;border-radius:4px;font-size:10px;padding:3px 7px;opacity:.7;">debug</button>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const FS_URL = 'https://services1.arcgis.com/kILp9lqGUeOhnDbI/arcgis/rest/services/service_d68fab51155d4f54b9fc6c270cb869e4_form/FeatureServer/0';
@@ -466,14 +470,14 @@ async function submitLoc() {
       heading:       hdg != null ? Math.round(hdg) : null
     };
 
-    const ok = await postFeature(lat, lng, attr, FS_URL);
+    const result = await postFeature(lat, lng, attr, FS_URL);
 
-    if (ok) {
+    if (result.ok) {
       toast(`Submitted · ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
       setStatus('Last submit: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       dropPin(lat, lng, attr);
     } else {
-      toast('Submit failed — check console', 'err');
+      toast(result.msg || 'Submit failed', 'err');
       setStatus('Submit failed');
     }
   } catch (e) {
@@ -612,7 +616,23 @@ function saveSettings() {
   toast('Settings saved');
 }
 
-// ── UTILS ─────────────────────────────────────────────────
+// ── DEBUG ─────────────────────────────────────────────────
+let dbgVisible = false;
+function toggleDbg() { dbgVisible=!dbgVisible; document.getElementById('dbg').style.display=dbgVisible?'block':'none'; }
+function dbg(...args) {
+  const msg = args.map(a => typeof a==='object' ? JSON.stringify(a,null,2) : String(a)).join(' ');
+  console.log(...args);
+  const el = document.getElementById('dbg');
+  const line = document.createElement('div');
+  line.style.borderBottom = '1px solid #0f02';
+  line.style.paddingBottom = '3px';
+  line.style.marginBottom = '3px';
+  line.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+
 function centerMap() { if (lastPos) map.setView([lastPos.coords.latitude, lastPos.coords.longitude], 16); }
 function setStatus(m) { document.getElementById('status-msg').textContent = m; }
 function toast(msg, type = '') {
