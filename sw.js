@@ -1,7 +1,7 @@
-const CACHE = 'field-tracker-v1';
+const CACHE = 'field-tracker-v2';
 const SHELL = [
-  '/index.html',
-  '/manifest.json',
+  './index.html',
+  './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
