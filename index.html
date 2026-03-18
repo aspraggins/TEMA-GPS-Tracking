@@ -143,7 +143,7 @@ const API_KEY = 'AAPTazhRcsXx2zds21YpZp1-dFg..EKg3yrraSGbd2qlXMFPcE7ilLY-lQXdcsV
 
 // ── STATE ─────────────────────────────────────────────────
 let map, locMarker, accCircle, trackLine;
-let isTracking = false, autoTimer = null;
+let isTracking = false, autoTimer = null, stalenessTimer = null;
 let lastPos = null, trackCoords = [];
 let cfg = {name:'',agency:'',region:'',car:'',assigned:'',notes:'',interval:30,mindist:10};
 
@@ -160,9 +160,29 @@ window.addEventListener('load', () => {
 window.addEventListener('resize', () => map && map.invalidateSize());
 
 // ── GPS ───────────────────────────────────────────────────
+let watchId = null;
+
 function startGPS() {
   if (!navigator.geolocation) { toast('Geolocation not available', 'err'); return; }
-  navigator.geolocation.watchPosition(onPos, onErr, {enableHighAccuracy:true, maximumAge:4000, timeout:15000});
+  beginWatch();
+  // on focus/visibility restore, restart the watch to kick Safari loose
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') restartWatch();
+  });
+  window.addEventListener('focus', restartWatch);
+}
+
+function beginWatch() {
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+    enableHighAccuracy: true, maximumAge: 0, timeout: 15000
+  });
+}
+
+function restartWatch() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  // also get an immediate one-shot fix so the banner updates right away
+  navigator.geolocation.getCurrentPosition(onPos, onErr, {enableHighAccuracy: true, timeout: 10000});
+  beginWatch();
 }
 
 function onPos(pos) {
@@ -184,6 +204,12 @@ function onPos(pos) {
   document.getElementById('m-spd').textContent  = spd != null ? `${(spd*2.237).toFixed(1)}mph` : '—';
   document.getElementById('m-hdg').textContent  = hdg != null ? `${Math.round(hdg)}°` : '—';
   document.getElementById('m-time').textContent = new Date(pos.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  clearTimeout(stalenessTimer);
+  stalenessTimer = setTimeout(() => {
+    document.getElementById('gps-dot').className = '';
+    toast('GPS signal lost — tap Center to retry', 'err');
+    restartWatch();
+  }, 20000);
 
   // marker
   if (!locMarker) {
