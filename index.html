@@ -449,32 +449,40 @@ async function submitLoc() {
   btn.disabled = true; btn.textContent = '…';
   setStatus('Submitting…');
 
-  const { latitude:lat, longitude:lng, speed:spd, heading:hdg } = lastPos.coords;
-  const attr = {
-    name:        cfg.name    || 'Unknown',
-    car_number:  cfg.car     || null,
-    agency:      cfg.agency  || null,
-    region:      cfg.region  || null,
-    assigned:    cfg.assigned|| null,
-    notes:       cfg.notes   || null,
-    photo:       null,
-    latitude:    lat,
-    longitude:   lng,
-    timestamp_utc: new Date(lastPos.timestamp).toISOString(),
-    speed_mph:   spd != null ? parseFloat((spd * 2.237).toFixed(1)) : null,
-    heading:     hdg != null ? Math.round(hdg) : null
-  };
+  try {
+    const { latitude:lat, longitude:lng, speed:spd, heading:hdg } = lastPos.coords;
+    const attr = {
+      name:          cfg.name     || 'Unknown',
+      car_number:    cfg.car      || null,
+      agency:        cfg.agency   || null,
+      region:        cfg.region   || null,
+      assigned:      cfg.assigned || null,
+      notes:         cfg.notes    || null,
+      photo:         null,
+      latitude:      lat,
+      longitude:     lng,
+      timestamp_utc: new Date(lastPos.timestamp).toISOString(),
+      speed_mph:     spd != null ? parseFloat((spd * 2.237).toFixed(1)) : null,
+      heading:       hdg != null ? Math.round(hdg) : null
+    };
 
-  const ok = await postFeature(lat, lng, attr, FS_URL);
-  btn.disabled = false; btn.textContent = 'Submit';
+    const ok = await postFeature(lat, lng, attr, FS_URL);
 
-  if (ok) {
-    toast(`Submitted · ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    setStatus('Last submit: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    dropPin(lat, lng, attr);
-  } else {
-    toast('Submit failed — check console', 'err');
-    setStatus('Submit failed');
+    if (ok) {
+      toast(`Submitted · ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      setStatus('Last submit: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      dropPin(lat, lng, attr);
+    } else {
+      toast('Submit failed — check console', 'err');
+      setStatus('Submit failed');
+    }
+  } catch (e) {
+    console.error('[Submit] Uncaught:', e);
+    toast('Error: ' + e.message, 'err');
+    setStatus('Submit error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
   }
 }
 
